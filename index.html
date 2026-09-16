@@ -2155,21 +2155,30 @@
           };
 
           // --- ROUTER Switch ---
-          switch (currentRoute) {
-            case '/': case '/login': return <ParticipantLogin />;
-            case '/instruction': return <ParticipantInstruction />;
-            case '/exam': return <ExamEngine />;
-            case '/review': return <ExamReview />;
-            case '/submitted': return <ExamSubmitted />;
-            case '/admin': case '/admin/login': return <AdminLogin />;
-            case '/admin/dashboard': return <AdminDashboard />;
-            case '/admin/tokens': return <AdminTokens />;
-            case '/admin/results': return <AdminResults />;
-            case '/admin/questions': return <AdminQuestions />;
-            case '/admin/analysis': return <AdminItemAnalysis />;
-            case '/admin/reports': return <AdminReports />;
-            default: return <ParticipantLogin />;
-          }
+          const renderRoute = () => {
+            switch (currentRoute) {
+              case '/': case '/login': return <ParticipantLogin />;
+              case '/instruction': return <ParticipantInstruction />;
+              case '/exam': return <ExamEngine />;
+              case '/review': return <ExamReview />;
+              case '/submitted': return <ExamSubmitted />;
+              case '/admin': case '/admin/login': return <AdminLogin />;
+              case '/admin/dashboard': return <AdminDashboard />;
+              case '/admin/tokens': return <AdminTokens />;
+              case '/admin/results': return <AdminResults />;
+              case '/admin/questions': return <AdminQuestions />;
+              case '/admin/analysis': return <AdminItemAnalysis />;
+              case '/admin/reports': return <AdminReports />;
+              default: return <ParticipantLogin />;
+            }
+          };
+
+          return (
+             <React.Fragment>
+                <CustomDialog dialog={dialog} onClose={() => setDialog(null)} />
+                {renderRoute()}
+             </React.Fragment>
+          );
         }
 
         ReactDOM.createRoot(document.getElementById('root')).render(<App />);
