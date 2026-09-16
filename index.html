@@ -52,13 +52,19 @@
                         background: '#F8FAFC' // Clean Slate Background
                     },
                     fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        reading: ['Lexend', 'sans-serif'],
                     }
                 }
             }
         }
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Typography Imports -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- KaTeX untuk Rumus Matematika -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
@@ -73,12 +79,15 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; -webkit-font-smoothing: antialiased; }
-        .rich-text-content { white-space: pre-wrap; word-wrap: break-word; line-height: 1.6; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #F8FAFC; -webkit-font-smoothing: antialiased; }
+        
+        /* Area Soal Specific Font */
+        .font-reading { font-family: 'Lexend', sans-serif; }
+        .rich-text-content { font-family: 'Lexend', sans-serif; white-space: pre-wrap; word-wrap: break-word; line-height: 1.8; max-width: 80ch; }
         .rich-text-content p { min-height: 1.5rem; margin-bottom: 0.5rem; }
         .rich-text-content img { max-width: 100%; height: auto; border-radius: 8px; margin: 8px 0; display: inline-block; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .math-tex { font-size: 1.15em; font-weight: normal; }
+        .math-tex { font-size: 1.15em; font-weight: normal; font-family: 'Lexend', sans-serif; }
+        
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
@@ -94,7 +103,6 @@
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in-up { animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         
-        /* Bar Chart Animation */
         .bar-fill { transition: height 1s cubic-bezier(0.4, 0, 0.2, 1); }
     </style>
 </head>
@@ -159,12 +167,18 @@
 
         /* --- UI COMPONENTS --- */
         const CustomDialog = ({ dialog, onClose }) => {
+            const [inputValue, setInputValue] = useState('');
+
+            // PERBAIKAN FATAL HOOK: Gunakan useEffect untuk set state, jangan return null di awal.
+            useEffect(() => {
+                if (dialog) setInputValue(dialog.defaultValue || '');
+            }, [dialog]);
+
             if (!dialog) return null;
-            const [inputValue, setInputValue] = useState(dialog.defaultValue || '');
 
             return (
                 <div className="fixed inset-0 modal-overlay z-[9999] flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center animate-fade-in-up border-t-4 border-primary-600">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center animate-fade-in-up border-t-4 border-primary-600 font-sans">
                         <div className="w-16 h-16 rounded-2xl bg-primary-50 text-primary-600 flex items-center justify-center mx-auto mb-4 shadow-sm">
                             {dialog.type === 'alert' ? <AlertCircle size={32} /> : dialog.type === 'confirm' ? <AlertCircle size={32} className="text-secondary" /> : <Edit size={32} />}
                         </div>
@@ -248,7 +262,7 @@
 
             return (
                 <div className="border border-slate-300 rounded-lg overflow-hidden bg-white focus-within:border-primary-500 focus-within:ring-1 transition-all">
-                    <div className="bg-slate-50 border-b border-slate-200 p-1.5 flex flex-wrap gap-1 items-center">
+                    <div className="bg-slate-50 border-b border-slate-200 p-1.5 flex flex-wrap gap-1 items-center font-sans">
                         <button onMouseDown={(e)=>execCmd('bold', e)} type="button" className="w-8 h-8 font-bold text-slate-700 hover:bg-slate-200 rounded">B</button>
                         <button onMouseDown={(e)=>execCmd('italic', e)} type="button" className="w-8 h-8 italic text-slate-700 hover:bg-slate-200 rounded">I</button>
                         <button onMouseDown={(e)=>execCmd('underline', e)} type="button" className="w-8 h-8 underline text-slate-700 hover:bg-slate-200 rounded">U</button>
@@ -281,7 +295,7 @@
                         </select>
                         <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
                     </div>
-                    <div ref={editorRef} contentEditable onInput={handleInput} onBlur={handleInput} className="p-3 outline-none rich-text-content editor-ignore-math text-slate-700 text-sm" style={{minHeight: minHeight}} placeholder={placeholder} />
+                    <div ref={editorRef} contentEditable onInput={handleInput} onBlur={handleInput} className="p-3 outline-none rich-text-content editor-ignore-math text-slate-700 font-reading text-[20px] max-w-full" style={{minHeight: minHeight}} placeholder={placeholder} />
                 </div>
             );
         };
@@ -310,12 +324,23 @@
         /* --- OLIMPIADE CORE LOGIC --- */
         const sortOlympiadResults = (resultsArray) => {
             return [...resultsArray].sort((a, b) => {
+                // 1. Prioritas Utama: Nilai Total Peserta (Skor Akhir Tertinggi)
                 if (b.score !== a.score) return b.score - a.score;
+                
+                // --- TIE BREAK RANKING ---
                 const statsA = a.detail?.stats || {};
                 const statsB = b.detail?.stats || {};
+                
+                // 2. Jumlah Benar Soal Sulit
                 if ((statsB.correctSulit||0) !== (statsA.correctSulit||0)) return (statsB.correctSulit||0) - (statsA.correctSulit||0);
+                
+                // 3. Jumlah Benar Soal Sedang
                 if ((statsB.correctSedang||0) !== (statsA.correctSedang||0)) return (statsB.correctSedang||0) - (statsA.correctSedang||0);
+                
+                // 4. Jumlah Benar Soal Mudah
                 if ((statsB.correctMudah||0) !== (statsA.correctMudah||0)) return (statsB.correctMudah||0) - (statsA.correctMudah||0);
+                
+                // 5. Waktu Selesai Tercepat
                 const timeA = a.endTime - a.startTime;
                 const timeB = b.endTime - b.startTime;
                 return timeA - timeB;
@@ -333,6 +358,7 @@
         const calculateScore = (answers, questions) => {
           let totalPoints = 0;
           let maxPossiblePoints = 0;
+          
           let correctMudah = 0, totalMudah = 0;
           let correctSedang = 0, totalSedang = 0;
           let correctSulit = 0, totalSulit = 0;
@@ -342,32 +368,39 @@
             let isCorrect = false;
             let pointsEarned = 0;
             
+            // Pengecekan Bobot Kesulitan
             const diff = q.difficulty || 'Mudah';
             let weight = 1.00;
             if (diff === 'Sedang') weight = 1.25;
             if (diff === 'Sulit') weight = 1.50;
 
+            // Kalkulasi Total Populasi Tingkat Kesulitan
             if (diff === 'Sulit') totalSulit++;
             else if (diff === 'Sedang') totalSedang++;
             else totalMudah++;
             
+            // Evaluasi Kebenaran
             if (q.type === 'MCQ') {
                 if (userAnswer && userAnswer === q.correctAnswer) isCorrect = true;
             } else if (q.type === 'SHORT') {
                 if (userAnswer && String(userAnswer).trim().toLowerCase() === String(q.correctAnswer).trim().toLowerCase()) isCorrect = true;
             } else if (q.type === 'ESSAY') {
-                isCorrect = false; 
+                isCorrect = false; // Penilaian Rubrik Manual
             }
             
+            // Distribusi Poin Sesuai Pedoman Penskoran
             if (isCorrect) {
-                pointsEarned = weight;
+                pointsEarned = weight; // Jika jawaban benar = Poin Sesuai Bobot
                 if (diff === 'Sulit') correctSulit++;
                 else if (diff === 'Sedang') correctSedang++;
                 else correctMudah++;
+            } else {
+                pointsEarned = 0; // Jika salah / kosong = Poin 0
             }
             
             maxPossiblePoints += weight;
             totalPoints += pointsEarned;
+            
             const isEmpty = !userAnswer || (typeof userAnswer === 'string' && userAnswer.trim() === '');
             
             return { 
@@ -376,14 +409,18 @@
             };
           });
           
+          // Formula Indeks Talenta Olimpiade (ITO)
           const pMudah = totalMudah > 0 ? (correctMudah / totalMudah) * 100 : 0;
           const pSedang = totalSedang > 0 ? (correctSedang / totalSedang) * 100 : 0;
           const pSulit = totalSulit > 0 ? (correctSulit / totalSulit) * 100 : 0;
           const ito = (0.50 * pSulit) + (0.30 * pSedang) + (0.20 * pMudah);
           
           return { 
-              finalScore: totalPoints, maxPossiblePoints, ito: Number(ito.toFixed(2)),
-              correctMudah, correctSedang, correctSulit, totalMudah, totalSedang, totalSulit,
+              finalScore: Number(totalPoints.toFixed(2)), 
+              maxPossiblePoints: Number(maxPossiblePoints.toFixed(2)), 
+              ito: Number(ito.toFixed(2)),
+              correctMudah, correctSedang, correctSulit, 
+              totalMudah, totalSedang, totalSulit,
               pMudah: Number(pMudah.toFixed(2)), pSedang: Number(pSedang.toFixed(2)), pSulit: Number(pSulit.toFixed(2)),
               detailedResults 
           };
@@ -412,6 +449,7 @@
           const [isAdminLoggedIn, setIsAdminLoggedIn] = useStickySession(false, 'cbt_admin_auth');
           const [studentResultPayload, setStudentResultPayload] = useStickySession(null, 'cbt_student_result');
           
+          // State Dialog Konfirmasi Kustom (Menggantikan Alert/Prompt bawaan browser)
           const [dialog, setDialog] = useState(null);
 
           const showAlert = useCallback((msg, onConfirm) => setDialog({ type: 'alert', msg, onConfirm }), []);
@@ -457,7 +495,7 @@
                         const isNewFormat = parsedDetail && parsedDetail.stats !== undefined;
                         return {
                             id: r.id, participant: { name: r.participant_name, school: r.participant_school, nis: r.participant_nis, grade: r.participant_grade },
-                            token: r.token, score: r.score, startTime: parseInt(r.start_time), endTime: parseInt(r.end_time),
+                            token: r.token, score: Number(r.score).toFixed(2), startTime: parseInt(r.start_time), endTime: parseInt(r.end_time),
                             detail: { detailedResults: isNewFormat ? parsedDetail.details : parsedDetail, stats: isNewFormat ? parsedDetail.stats : { ito: 0, correctMudah: 0, correctSedang: 0, correctSulit: 0, pMudah: 0, pSedang: 0, pSulit: 0 } }, 
                             created_at: r.created_at
                         };
@@ -513,15 +551,15 @@
             };
 
             return (
-              <div className="min-h-screen bg-background flex flex-col justify-center items-center p-4">
+              <div className="min-h-screen bg-background flex flex-col justify-center items-center p-4 font-sans">
                 <div className="max-w-md w-full bg-white rounded-3xl shadow-xl p-8 border-t-4 border-primary-700 relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary-400 via-secondary to-success"></div>
                   <div className="text-center mb-8 mt-2">
                     <div className="w-20 h-20 bg-primary-50 text-primary-700 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-sm overflow-hidden border border-primary-100">
                         {schoolLogo ? <img src={schoolLogo} alt="Logo" className="w-full h-full object-cover"/> : <Medal size={40} />}
                     </div>
-                    <h1 className="text-3xl font-black text-primary-800 tracking-tight">Kelas Olimpiade</h1>
-                    <p className="text-slate-500 font-bold mt-1 text-sm tracking-widest uppercase">{organizerName}</p>
+                    <h1 className="text-[24px] md:text-[32px] font-bold text-primary-800 tracking-tight">Kelas Olimpiade</h1>
+                    <p className="text-slate-500 font-semibold mt-1 text-[16px] md:text-[18px]">{organizerName}</p>
                   </div>
                   
                   {initErrorMsg && (
@@ -533,7 +571,7 @@
 
                   <form onSubmit={handleLogin} className="space-y-5">
                     <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-2">Token Peserta</label>
+                      <label className="block text-[14px] font-bold text-slate-700 mb-2">Token Peserta</label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><Key className="h-5 w-5 text-slate-400" /></div>
                         <input type="text" className="block w-full pl-11 pr-4 py-3.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 uppercase tracking-widest font-bold text-slate-800 placeholder-slate-300 bg-slate-50 focus:bg-white transition-all outline-none" placeholder="Ketik Token..." value={inputToken} onChange={(e) => setInputToken(e.target.value.toUpperCase())} required disabled={isChecking || dbStatus === 'error'}/>
@@ -601,14 +639,14 @@
             const stats = activeQuestions.reduce((acc, q) => { const diff = q.difficulty || 'Mudah'; acc[diff] = (acc[diff] || 0) + 1; return acc; }, { Mudah: 0, Sedang: 0, Sulit: 0 });
 
             return (
-              <div className="min-h-screen bg-background py-10 px-4 flex justify-center items-center">
+              <div className="min-h-screen bg-background py-10 px-4 flex justify-center items-center font-sans">
                  <div className="max-w-3xl w-full bg-white rounded-3xl shadow-xl p-8 md:p-10 border-t-4 border-primary-700 relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none"><Trophy size={180}/></div>
                     <div className="flex items-center mb-8 pb-5 border-b border-slate-100">
                        <div className="w-12 h-12 bg-primary-50 text-primary-700 flex items-center justify-center rounded-xl mr-4"><FileText size={24} /></div>
                        <div>
-                           <h2 className="text-2xl font-black text-primary-800">Petunjuk Pengerjaan Olimpiade</h2>
-                           <p className="text-slate-500 font-medium text-sm mt-1">Harap baca dengan cermat sebelum memulai kompetisi.</p>
+                           <h2 className="text-[24px] font-bold text-primary-800">Petunjuk Pengerjaan Olimpiade</h2>
+                           <p className="text-slate-500 font-semibold text-[16px] mt-1">Harap baca dengan cermat sebelum memulai kompetisi.</p>
                        </div>
                     </div>
                     
@@ -690,7 +728,7 @@
             }, [activeSession]);
 
             const examQuestions = activeSession?.sessionQuestions || activeQuestions;
-            if (!activeSession || examQuestions.length === 0 || !examQuestions[examCurrentIndex]) return <div className="min-h-screen flex items-center justify-center font-medium text-slate-500">Memuat soal...</div>;
+            if (!activeSession || examQuestions.length === 0 || !examQuestions[examCurrentIndex]) return <div className="min-h-screen flex items-center justify-center font-medium text-slate-500 font-sans">Memuat soal...</div>;
             
             const currentQuestion = examQuestions[examCurrentIndex];
             const currentAnswer = activeSession.answers[currentQuestion.id];
@@ -700,17 +738,17 @@
             const toggleFlag = () => { setActiveSession(prev => ({ ...prev, flagged: isFlagged ? prev.flagged.filter(id => id !== currentQuestion.id) : [...(prev.flagged || []), currentQuestion.id] })); };
 
             const getDiffBadge = (diff) => {
-                if (diff === 'Sulit') return <span className="bg-rose-100 text-rose-700 border border-rose-200 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ml-2">Sulit</span>;
-                if (diff === 'Sedang') return <span className="bg-primary-100 text-primary-700 border border-primary-200 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ml-2">Sedang</span>;
-                return <span className="bg-success/20 text-success-700 border border-success/30 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ml-2">Mudah</span>;
+                if (diff === 'Sulit') return <span className="bg-rose-100 text-rose-700 border border-rose-200 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ml-2 font-sans">Sulit</span>;
+                if (diff === 'Sedang') return <span className="bg-primary-100 text-primary-700 border border-primary-200 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ml-2 font-sans">Sedang</span>;
+                return <span className="bg-success/20 text-success-700 border border-success/30 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ml-2 font-sans">Mudah</span>;
             };
 
             const RenderMCQ = () => (
-              <div className="space-y-3 mt-6">
+              <div className="space-y-4 mt-6">
                 {(currentQuestion.options||[]).map(opt => (
-                  <label key={opt.id} className={`flex items-start p-4 border-2 rounded-xl cursor-pointer transition-all ${currentAnswer === opt.id ? 'border-primary-500 bg-primary-50 shadow-sm' : 'border-slate-200 hover:bg-slate-50'}`}>
-                    <div className="flex items-center h-6 mt-0.5"><input type="radio" checked={currentAnswer === opt.id} onChange={() => { handleAnswerChange(opt.id); setTimeout(() => {if(examCurrentIndex < examQuestions.length - 1) setExamCurrentIndex(examCurrentIndex + 1);}, 300); }} className="w-5 h-5 accent-primary-600" /></div>
-                    <div className="ml-4 flex-1 flex text-slate-800"><span className="font-bold text-slate-400 w-6 mt-0.5">{opt.id}.</span><div className="flex-1 rich-text-content" dangerouslySetInnerHTML={{__html: opt.text}}></div></div>
+                  <label key={opt.id} className={`flex items-start p-5 border-2 rounded-xl cursor-pointer transition-all ${currentAnswer === opt.id ? 'border-primary-500 bg-primary-50 shadow-sm' : 'border-slate-200 hover:bg-slate-50'}`}>
+                    <div className="flex items-center h-6 mt-1"><input type="radio" checked={currentAnswer === opt.id} onChange={() => { handleAnswerChange(opt.id); setTimeout(() => {if(examCurrentIndex < examQuestions.length - 1) setExamCurrentIndex(examCurrentIndex + 1);}, 300); }} className="w-5 h-5 accent-primary-600" /></div>
+                    <div className="ml-4 flex-1 flex text-slate-800"><span className="font-bold text-slate-400 w-6 mt-1 font-sans text-[18px]">{opt.id}.</span><div className="flex-1 rich-text-content font-reading text-[16px] md:text-[18px] leading-[1.7]" dangerouslySetInnerHTML={{__html: opt.text}}></div></div>
                   </label>
                 ))}
               </div>
@@ -718,15 +756,15 @@
 
             const RenderSHORT = () => (
               <div className="mt-6">
-                  <div className="bg-primary-50 border border-primary-100 p-4 rounded-xl mb-4 text-sm text-primary-800 font-medium flex items-center"><AlertCircle size={18} className="mr-2"/> Ketikkan jawaban singkat berupa angka atau satu/dua kata secara presisi.</div>
-                  <input type="text" value={currentAnswer || ''} onChange={e => handleAnswerChange(e.target.value)} placeholder="Ketik jawaban di sini..." className="w-full p-4 text-lg font-bold text-slate-800 bg-white border-2 border-slate-300 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/20 outline-none transition-all shadow-sm" autoFocus/>
+                  <div className="bg-primary-50 border border-primary-100 p-4 rounded-xl mb-4 text-[14px] text-primary-800 font-medium flex items-center font-sans"><AlertCircle size={18} className="mr-2"/> Ketikkan jawaban singkat berupa angka atau satu/dua kata secara presisi.</div>
+                  <input type="text" value={currentAnswer || ''} onChange={e => handleAnswerChange(e.target.value)} placeholder="Ketik jawaban di sini..." className="w-full p-4 text-[20px] font-bold text-slate-800 bg-white border-2 border-slate-300 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/20 outline-none transition-all shadow-sm font-reading" autoFocus/>
               </div>
             );
 
             const RenderESSAY = () => (
               <div className="mt-6">
-                  <div className="bg-success/10 border border-success/20 p-4 rounded-xl mb-4 text-sm text-success-800 font-medium flex items-center"><AlertCircle size={18} className="mr-2"/> Jawablah uraian secara rinci dan komprehensif. (Penilaian rubrik guru)</div>
-                  <textarea value={currentAnswer || ''} onChange={e => handleAnswerChange(e.target.value)} placeholder="Tulis uraian jawaban secara lengkap..." className="w-full p-4 text-base font-medium text-slate-800 bg-white border-2 border-slate-300 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/20 outline-none transition-all shadow-sm h-48 resize-y" />
+                  <div className="bg-success/10 border border-success/20 p-4 rounded-xl mb-4 text-[14px] text-success-800 font-medium flex items-center font-sans"><AlertCircle size={18} className="mr-2"/> Jawablah uraian secara rinci dan komprehensif. (Penilaian rubrik guru)</div>
+                  <textarea value={currentAnswer || ''} onChange={e => handleAnswerChange(e.target.value)} placeholder="Tulis uraian jawaban secara lengkap..." className="w-full p-4 text-[18px] font-medium text-slate-800 bg-white border-2 border-slate-300 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/20 outline-none transition-all shadow-sm h-64 resize-y font-reading leading-[1.8]" />
               </div>
             );
 
@@ -734,7 +772,7 @@
 
             return (
               <div className="min-h-screen bg-background flex flex-col prevent-select">
-                <header className="bg-primary-800 shadow-md px-4 sm:px-6 py-3 flex justify-between items-center sticky top-0 z-20 border-b-4 border-secondary">
+                <header className="bg-primary-800 shadow-md px-4 sm:px-6 py-3 flex justify-between items-center sticky top-0 z-20 border-b-4 border-secondary font-sans">
                    <div className="flex items-center">
                       <div className="hidden sm:flex w-10 h-10 bg-secondary rounded-lg items-center justify-center text-white mr-3 shadow-sm"><Medal size={20}/></div>
                       <div><h1 className="text-lg font-black text-white leading-tight uppercase tracking-wider">Kelas Olimpiade</h1><p className="text-xs text-secondary-200 font-bold tracking-widest uppercase">{activeSession.participant?.name}</p></div>
@@ -743,23 +781,23 @@
                       <Clock size={18} className="mr-2" /> {fmtTime(timeLeft)}
                    </div>
                 </header>
-                <div className="flex-1 flex flex-col lg:flex-row max-w-[1400px] w-full mx-auto p-4 sm:p-6 gap-6">
+                <div className="flex-1 flex flex-col lg:flex-row max-w-[1400px] w-full mx-auto p-4 sm:p-6 gap-6 font-sans">
                    <div className="flex-1 flex flex-col min-w-0">
                       <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 sm:p-10 flex-1 flex flex-col relative overflow-hidden">
                          <div className="flex flex-wrap gap-2 justify-between items-center mb-6 pb-5 border-b border-slate-100">
                             <div className="flex items-center">
-                                <h2 className="text-2xl font-black text-primary-800">SOAL {examCurrentIndex + 1}</h2>
+                                <h2 className="text-[18px] font-black text-primary-800 font-sans">SOAL {examCurrentIndex + 1}</h2>
                                 {getDiffBadge(currentQuestion.difficulty)}
                             </div>
-                            <span className="text-[10px] font-black px-3 py-1.5 rounded bg-slate-100 text-slate-500 uppercase tracking-widest border border-slate-200">{currentQuestion.type === 'MCQ' ? 'PILIHAN GANDA' : currentQuestion.type === 'SHORT' ? 'ISIAN SINGKAT' : 'URAIAN/ESSAY'}</span>
+                            <span className="text-[10px] font-black px-3 py-1.5 rounded bg-slate-100 text-slate-500 uppercase tracking-widest border border-slate-200 font-sans">{currentQuestion.type === 'MCQ' ? 'PILIHAN GANDA' : currentQuestion.type === 'SHORT' ? 'ISIAN SINGKAT' : 'URAIAN/ESSAY'}</span>
                          </div>
                          <div className="flex-1 overflow-y-auto pr-2 pb-8">
-                            <div className="text-base sm:text-lg text-slate-800 leading-relaxed font-semibold mb-6 rich-text-content" dangerouslySetInnerHTML={{ __html: currentQuestion.question || '' }} />
+                            <div className="text-[18px] md:text-[20px] text-slate-800 font-reading leading-[1.8] max-w-[80ch] mb-6 rich-text-content" dangerouslySetInnerHTML={{ __html: currentQuestion.question || '' }} />
                             {currentQuestion.type === 'MCQ' && <RenderMCQ />}
                             {currentQuestion.type === 'SHORT' && <RenderSHORT />}
                             {currentQuestion.type === 'ESSAY' && <RenderESSAY />}
                          </div>
-                         <div className="pt-6 mt-6 border-t border-slate-100 flex flex-wrap justify-between items-center gap-3">
+                         <div className="pt-6 mt-6 border-t border-slate-100 flex flex-wrap justify-between items-center gap-3 font-sans">
                             <button onClick={() => setExamCurrentIndex(Math.max(0, examCurrentIndex - 1))} disabled={examCurrentIndex === 0} className="px-5 py-3 bg-white text-slate-700 rounded-xl disabled:opacity-50 font-bold border-2 border-slate-200 hover:bg-slate-50 transition-colors shadow-sm"><ChevronLeft size={18} className="inline mr-1" /> Sebelum</button>
                             <label className={`flex items-center px-5 py-3 rounded-xl font-bold border-2 cursor-pointer transition-all shadow-sm ${isFlagged ? 'bg-secondary/20 border-secondary text-secondary-800' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
                                <input type="checkbox" checked={isFlagged} onChange={toggleFlag} className="mr-2 w-5 h-5 accent-secondary rounded" /> Tandai Ragu
@@ -773,15 +811,15 @@
                       </div>
                    </div>
                    <div className="lg:w-80 w-full flex-shrink-0">
-                      <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 sticky top-24">
-                         <h3 className="text-sm font-black uppercase tracking-widest text-primary-800 mb-5 flex items-center border-b border-slate-100 pb-4"><LayoutDashboard size={18} className="mr-2 text-primary-500"/> Navigasi Soal</h3>
+                      <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 sticky top-24 font-sans">
+                         <h3 className="text-[14px] font-black uppercase tracking-widest text-primary-800 mb-5 flex items-center border-b border-slate-100 pb-4"><LayoutDashboard size={18} className="mr-2 text-primary-500"/> Navigasi Soal</h3>
                          <div className="grid grid-cols-5 gap-2.5 max-h-[50vh] overflow-y-auto pr-1">
                             {examQuestions.map((q, idx) => {
                                const ans = activeSession.answers[q.id];
                                const isAns = q.type==='MCQ'? !!ans : (typeof ans==='string' && ans.trim()!=='');
                                const isCur = idx === examCurrentIndex;
                                const isFlg = activeSession.flagged?.includes(q.id);
-                               let cls = "h-11 w-full rounded-xl font-black text-sm flex items-center justify-center border-2 transition-all cursor-pointer shadow-sm ";
+                               let cls = "h-11 w-full rounded-xl font-black text-[14px] flex items-center justify-center border-2 transition-all cursor-pointer shadow-sm ";
                                if (isCur) cls += "ring-4 ring-primary-500/30 bg-white text-primary-800 border-primary-500 transform scale-105 z-10";
                                else if (isFlg) cls += "bg-secondary text-white border-secondary-600";
                                else if (isAns) cls += "bg-success text-white border-success-600";
@@ -837,15 +875,14 @@
              };
 
              return (
-               <div className="min-h-screen bg-primary-900 flex py-10 px-4 justify-center items-center relative overflow-hidden">
-                   {/* Background Elements */}
+               <div className="min-h-screen bg-primary-900 flex py-10 px-4 justify-center items-center relative overflow-hidden font-sans">
                    <div className="absolute -top-40 -right-40 w-96 h-96 bg-secondary rounded-full blur-[100px] opacity-20"></div>
                    <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-primary-500 rounded-full blur-[100px] opacity-20"></div>
 
                    <div className="bg-white p-8 md:p-12 rounded-3xl shadow-2xl max-w-2xl w-full text-center relative z-10">
                       <div className="w-20 h-20 bg-primary-50 text-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-6"><CheckSquare size={36}/></div>
                       <h2 className="text-3xl font-black mb-2 text-primary-800">Konfirmasi Pengumpulan</h2>
-                      <p className="text-slate-500 font-medium mb-8">Pastikan semua soal telah terjawab dengan maksimal sebelum mengakhiri kelas olimpiade.</p>
+                      <p className="text-slate-500 font-medium mb-8 text-[16px]">Pastikan semua soal telah terjawab dengan maksimal sebelum mengakhiri kelas olimpiade.</p>
                       
                       <div className="grid grid-cols-2 gap-5 mb-10">
                          <div className="p-6 bg-slate-50 border-2 border-slate-100 rounded-2xl"><p className="text-slate-500 text-xs font-black uppercase tracking-widest mb-2">Total Soal</p><p className="text-5xl font-black text-slate-800">{totalQ}</p></div>
@@ -875,12 +912,12 @@
              if (!studentResultPayload) return <div className="min-h-screen flex items-center justify-center font-sans font-bold text-slate-500">Memuat Hasil...</div>;
 
              return (
-                <div className="min-h-screen bg-background py-10 px-4 flex justify-center items-center">
+                <div className="min-h-screen bg-background py-10 px-4 flex justify-center items-center font-sans">
                     <div className="bg-white p-10 rounded-3xl shadow-xl max-w-md w-full text-center border-t-4 border-success animate-fade-in-up">
                         <div className="w-20 h-20 bg-success/10 text-success-600 rounded-full flex items-center justify-center mx-auto mb-6"><CheckCircle size={40}/></div>
-                        <h2 className="text-2xl font-black text-slate-800 uppercase tracking-widest mb-2 font-sans">Ujian Selesai</h2>
-                        <p className="text-slate-500 font-medium text-sm mb-8 font-reading leading-relaxed">Jawaban Anda telah berhasil diunggah ke sistem. Anda dapat menutup halaman ini atau kembali ke layar utama.</p>
-                        <button onClick={() => { setStudentResultPayload(null); navigate('/'); }} className="w-full py-4 bg-slate-800 text-white font-black uppercase tracking-widest rounded-xl hover:bg-slate-900 transition-colors shadow-md font-sans">Selesai & Keluar</button>
+                        <h2 className="text-[24px] font-black text-slate-800 uppercase tracking-widest mb-2">Ujian Selesai</h2>
+                        <p className="text-slate-500 font-medium text-[16px] mb-8 leading-relaxed">Jawaban Anda telah berhasil diunggah ke sistem secara permanen. Silakan kembali ke layar utama.</p>
+                        <button onClick={() => { setStudentResultPayload(null); navigate('/'); }} className="w-full py-4 bg-slate-800 text-white font-black uppercase tracking-widest rounded-xl hover:bg-slate-900 transition-colors shadow-md">Selesai & Keluar</button>
                     </div>
                 </div>
              );
@@ -889,7 +926,7 @@
           const AdminLogin = () => {
             const [u, setU] = useState(''); const [p, setP] = useState(''); const [showP, setShowP] = useState(false);
             return (
-              <div className="min-h-screen bg-primary-900 flex justify-center items-center p-4 relative overflow-hidden">
+              <div className="min-h-screen bg-primary-900 flex justify-center items-center p-4 relative overflow-hidden font-sans">
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary-600/20 rounded-full blur-[120px] pointer-events-none"></div>
                 <form onSubmit={(e)=>{
                     e.preventDefault(); 
@@ -927,7 +964,7 @@
               { id: 'reports', label: 'Cetak Laporan', icon: Printer, path: '/admin/reports' }
             ];
             return (
-              <div className="min-h-screen bg-background flex print:block">
+              <div className="min-h-screen bg-background flex print:block font-sans">
                 {isMobileMenuOpen && <div className="fixed inset-0 bg-primary-900/60 z-40 lg:hidden backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />}
                 <div className={`fixed inset-y-0 left-0 z-50 w-72 bg-primary-800 text-primary-200 flex flex-col transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0 transition-transform shadow-2xl`}>
                   <div className="p-6 flex items-center justify-between border-b border-primary-900/50">
@@ -941,7 +978,7 @@
                       {menu.map(m => {
                           const isActive = currentRoute.startsWith(m.path);
                           return (
-                              <button key={m.id} onClick={() => { setIsMobileMenuOpen(false); navigate(m.path); }} className={`w-full flex items-center px-4 py-3.5 rounded-xl text-sm font-bold transition-all ${isActive ? 'bg-primary-600 text-white shadow-md' : 'text-primary-300 hover:bg-primary-900 hover:text-white'}`}>
+                              <button key={m.id} onClick={() => { setIsMobileMenuOpen(false); navigate(m.path); }} className={`w-full flex items-center px-4 py-3.5 rounded-xl text-[14px] font-bold transition-all ${isActive ? 'bg-primary-600 text-white shadow-md' : 'text-primary-300 hover:bg-primary-900 hover:text-white'}`}>
                                   <m.icon size={18} className={`mr-3 ${isActive ? 'text-primary-200' : 'opacity-70'}`}/> {m.label}
                               </button>
                           );
@@ -951,7 +988,7 @@
                 </div>
                 <div className="flex-1 flex flex-col h-screen overflow-hidden print:h-auto print:block relative">
                   <header className="bg-white border-b border-slate-200 px-6 sm:px-8 py-5 flex justify-between items-center sticky top-0 z-10 print:hidden shadow-sm">
-                    <div className="flex items-center gap-4"><button className="lg:hidden p-2.5 bg-slate-100 rounded-xl text-slate-600 hover:bg-slate-200 transition-colors" onClick={() => setIsMobileMenuOpen(true)}><Menu size={20}/></button><h2 className="text-xl font-black text-primary-800 uppercase tracking-wide">{title}</h2></div>
+                    <div className="flex items-center gap-4"><button className="lg:hidden p-2.5 bg-slate-100 rounded-xl text-slate-600 hover:bg-slate-200 transition-colors" onClick={() => setIsMobileMenuOpen(true)}><Menu size={20}/></button><h2 className="text-[20px] md:text-[24px] font-black text-primary-800 uppercase tracking-wide">{title}</h2></div>
                     <span className="text-[10px] font-black tracking-widest uppercase px-3 py-1.5 bg-success/10 text-success-700 border border-success/20 rounded-lg flex items-center shadow-sm"><Cloud size={12} className="mr-1.5"/> Data Sinkron</span>
                   </header>
                   <main className="flex-1 overflow-y-auto p-6 lg:p-8 print:p-0 relative">
@@ -1048,7 +1085,7 @@
                     </div>
                     <div className="bg-white p-6 rounded-3xl border shadow-sm relative overflow-hidden group">
                         <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform"><Medal size={80}/></div>
-                        <div className="text-secondary text-[10px] font-black tracking-widest uppercase mb-1 relative z-10 font-sans">Kandidat OSN (ITO &gt; 70)</div>
+                        <div className="text-secondary text-[10px] font-black tracking-widest uppercase mb-1 relative z-10 font-sans">Kandidat OSN (ITO &ge; 70)</div>
                         <div className="text-4xl font-black text-secondary relative z-10 font-sans">{kandidatOsnCount}</div>
                     </div>
                     <div className="bg-white p-6 rounded-3xl border shadow-sm relative overflow-hidden group">
@@ -1067,7 +1104,7 @@
                     <div className="lg:col-span-2 space-y-8">
                         {/* Top 10 Leaderboard */}
                         <div className="bg-white rounded-3xl border shadow-sm p-6">
-                            <h3 className="text-lg font-black text-primary-800 uppercase tracking-widest mb-6 flex items-center border-b border-slate-100 pb-4"><Trophy size={20} className="mr-3 text-secondary"/> Top 10 Leaderboard</h3>
+                            <h3 className="text-[18px] font-black text-primary-800 uppercase tracking-widest mb-6 flex items-center border-b border-slate-100 pb-4"><Trophy size={20} className="mr-3 text-secondary"/> Top 10 Leaderboard</h3>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left text-sm">
                                     <thead><tr className="text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-100">
@@ -1079,12 +1116,12 @@
                                     <tbody>
                                         {top10.map((r, i) => (
                                             <tr key={r.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                                                <td className="py-3 text-center font-black text-slate-400">{i+1}</td>
+                                                <td className="py-3 text-center font-black text-slate-400 text-[16px]">{i+1}</td>
                                                 <td className="py-3">
-                                                    <div className="font-bold text-slate-800 uppercase">{r.participant?.name}</div>
+                                                    <div className="font-bold text-[15px] text-slate-800 uppercase">{r.participant?.name}</div>
                                                     <div className="text-xs text-slate-500 font-medium">{r.participant?.school}</div>
                                                 </td>
-                                                <td className="py-3 text-center font-black text-slate-700">{r.score}</td>
+                                                <td className="py-3 text-center font-black text-[16px] text-slate-700">{r.score}</td>
                                                 <td className="py-3 text-center">
                                                     <span className={`px-2 py-1 text-[10px] font-black uppercase tracking-widest rounded border ${getITOCategory(r.detail?.stats?.ito||0).color}`}>{(r.detail?.stats?.ito||0).toFixed(1)}</span>
                                                 </td>
@@ -1146,7 +1183,7 @@
                                 {kandidatOSNList.map((r, i) => (
                                     <div key={r.id} className="bg-white p-3 rounded-xl border border-secondary/20 flex justify-between items-center shadow-sm">
                                         <div>
-                                            <div className="font-bold text-slate-800 text-xs uppercase">{r.participant?.name}</div>
+                                            <div className="font-bold text-slate-800 text-[14px] uppercase">{r.participant?.name}</div>
                                             <div className="text-[10px] text-slate-500 font-medium">{r.participant?.school}</div>
                                         </div>
                                         <div className="bg-secondary text-white px-2 py-1 rounded text-xs font-black">
@@ -1184,7 +1221,7 @@
                         <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200">
                             <h3 className="text-sm font-black text-primary-800 uppercase tracking-widest mb-6 flex items-center"><Settings size={16} className="mr-2 text-slate-400"/> Konfigurasi Sistem</h3>
                             <div className="space-y-4">
-                                <div><label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">Label Penyelenggara</label><input type="text" value={tempOrganizer} onChange={e=>setTempOrganizer(e.target.value)} className="w-full p-3 rounded-xl border border-slate-300 bg-white text-sm font-semibold outline-none focus:ring-2 focus:ring-primary-500"/></div>
+                                <div><label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">Label Penyelenggara</label><input type="text" value={tempOrganizer} onChange={e=>setTempOrganizer(e.target.value)} className="w-full p-3 rounded-xl border border-slate-300 bg-white text-[14px] font-semibold outline-none focus:ring-2 focus:ring-primary-500"/></div>
                                 <div>
                                     <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">Logo</label>
                                     <div className="flex items-center gap-3">
@@ -1192,14 +1229,14 @@
                                         <input type="file" accept="image/*" onChange={handleLogoUpload} className="w-full text-xs font-semibold file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-primary-50 file:text-primary-700 cursor-pointer text-slate-500"/>
                                     </div>
                                 </div>
-                                <div><label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">Tanggal Ujian</label><input type="date" value={tempDate} onChange={e=>setTempDate(e.target.value)} className="w-full p-3 rounded-xl border border-slate-300 bg-white text-sm font-semibold outline-none focus:ring-2 focus:ring-primary-500"/></div>
+                                <div><label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">Tanggal Ujian</label><input type="date" value={tempDate} onChange={e=>setTempDate(e.target.value)} className="w-full p-3 rounded-xl border border-slate-300 bg-white text-[14px] font-semibold outline-none focus:ring-2 focus:ring-primary-500"/></div>
                                 <div className="grid grid-cols-2 gap-3">
-                                    <div><label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">Jam Mulai</label><input type="time" value={tempStartTime} onChange={e=>setTempStartTime(e.target.value)} className="w-full p-3 rounded-xl border border-slate-300 bg-white text-sm font-semibold outline-none focus:ring-2 focus:ring-primary-500"/></div>
-                                    <div><label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">Jam Selesai</label><input type="time" value={tempEndTime} onChange={e=>setTempEndTime(e.target.value)} className="w-full p-3 rounded-xl border border-slate-300 bg-white text-sm font-semibold outline-none focus:ring-2 focus:ring-primary-500"/></div>
+                                    <div><label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">Jam Mulai</label><input type="time" value={tempStartTime} onChange={e=>setTempStartTime(e.target.value)} className="w-full p-3 rounded-xl border border-slate-300 bg-white text-[14px] font-semibold outline-none focus:ring-2 focus:ring-primary-500"/></div>
+                                    <div><label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">Jam Selesai</label><input type="time" value={tempEndTime} onChange={e=>setTempEndTime(e.target.value)} className="w-full p-3 rounded-xl border border-slate-300 bg-white text-[14px] font-semibold outline-none focus:ring-2 focus:ring-primary-500"/></div>
                                 </div>
                                 <div className="bg-white p-4 rounded-xl border space-y-3 mt-2">
-                                    <label className="flex items-center cursor-pointer text-xs font-bold text-slate-700"><input type="checkbox" checked={tempRandomQ} onChange={e=>setTempRandomQ(e.target.checked)} className="w-4 h-4 mr-3 accent-primary-600 rounded"/> Acak Urutan Soal</label>
-                                    <label className="flex items-center cursor-pointer text-xs font-bold text-slate-700"><input type="checkbox" checked={tempRandomOpt} onChange={e=>setTempRandomOpt(e.target.checked)} className="w-4 h-4 mr-3 accent-primary-600 rounded"/> Acak Opsi Pilihan Ganda</label>
+                                    <label className="flex items-center cursor-pointer text-[14px] font-bold text-slate-700"><input type="checkbox" checked={tempRandomQ} onChange={e=>setTempRandomQ(e.target.checked)} className="w-4 h-4 mr-3 accent-primary-600 rounded"/> Acak Urutan Soal</label>
+                                    <label className="flex items-center cursor-pointer text-[14px] font-bold text-slate-700"><input type="checkbox" checked={tempRandomOpt} onChange={e=>setTempRandomOpt(e.target.checked)} className="w-4 h-4 mr-3 accent-primary-600 rounded"/> Acak Opsi Pilihan Ganda</label>
                                 </div>
                                 <button onClick={saveSettings} disabled={isSaving} className="w-full bg-primary-700 text-white py-3.5 rounded-xl font-black uppercase tracking-widest shadow-md hover:bg-primary-800 transition-colors disabled:opacity-50 mt-4">{isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}</button>
                             </div>
@@ -1242,6 +1279,7 @@
                          const { error } = await db.from('tokens').delete().in('code', selectedTokens);
                          if (error) throw error;
                          await fetchSupabaseData(); setSelectedTokens([]); 
+                         showAlert("Data terpilih berhasil dihapus.");
                      } catch (err) { showAlert("Gagal hapus masal: " + err.message); } finally { setIsSaving(false); }
                  });
              };
@@ -1294,7 +1332,7 @@
                      }
                      if (payloads.length === 0) { showAlert('Format kosong atau salah.'); return; }
                      setIsSaving(true);
-                     try { const db = await getSupabase(); await db.from('tokens').insert(payloads); setShowImport(false); fetchSupabaseData(); } catch(err) { showAlert("Gagal impor: " + err.message); } finally { setIsSaving(false); }
+                     try { const db = await getSupabase(); await db.from('tokens').insert(payloads); setShowImport(false); fetchSupabaseData(); showAlert("Data token peserta berhasil diimpor."); } catch(err) { showAlert("Gagal impor: " + err.message); } finally { setIsSaving(false); }
                  };
                  reader.readAsText(file);
              };
@@ -1307,6 +1345,7 @@
                      const db = await getSupabase();
                      await db.from('tokens').insert([{ code: newCode, status: 'AVAILABLE', participant_name: manualForm.name, participant_school: manualForm.school, generatedAt: new Date().toISOString() }]);
                      fetchSupabaseData(); setShowAddManualModal(false); setManualForm({name:'', school:''});
+                     showAlert("Data token ditambahkan secara manual.");
                  } catch(e) { showAlert(e.message); }
                  setIsSaving(false);
              };
@@ -1326,12 +1365,13 @@
                      const db = await getSupabase();
                      await db.from('tokens').upsert(massEditTokens.map(t => ({ code: t.code, status: t.status, participant_name: t.participant_name, participant_school: t.participant_school })));
                      fetchSupabaseData(); setIsMassEdit(false); setSelectedTokens([]); 
+                     showAlert("Pembaruan masal berhasil disimpan.");
                  } catch(e) { showAlert(e.message); }
                  setIsSaving(false);
              };
 
              const deleteToken = async (code) => {
-                 showConfirm(`Hapus token ${code}?`, async () => { setIsSaving(true); try { const db = await getSupabase(); await db.from('tokens').delete().eq('code', code); fetchSupabaseData(); } catch(e) { showAlert(e.message); } setIsSaving(false); });
+                 showConfirm(`Hapus token ${code}?`, async () => { setIsSaving(true); try { const db = await getSupabase(); await db.from('tokens').delete().eq('code', code); fetchSupabaseData(); showAlert("Token berhasil dihapus."); } catch(e) { showAlert(e.message); } setIsSaving(false); });
              };
 
              return (
@@ -1377,7 +1417,7 @@
                  </div>
 
                  {showImport && (
-                     <div className="fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
+                     <div className="fixed inset-0 modal-overlay z-[9999] flex items-center justify-center p-4">
                         <div className="bg-white rounded-3xl shadow-xl w-full max-w-md p-8 border-t-4 border-primary-600 animate-fade-in-up">
                             <div className="flex justify-between items-center mb-6"><h3 className="text-xl font-black text-slate-800 uppercase tracking-widest">Impor CSV</h3><button onClick={()=>setShowImport(false)} className="text-slate-400 hover:text-slate-700 bg-slate-100 p-2 rounded-lg"><X size={16}/></button></div>
                             <button onClick={downloadTemplate} className="mb-6 w-full bg-primary-50 border border-primary-100 text-primary-700 hover:bg-primary-100 py-3 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center transition-colors"><FileText size={16} className="mr-2"/> Download Format File</button>
@@ -1391,12 +1431,12 @@
                  )}
 
                  {showAddManualModal && (
-                    <div className="fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
+                    <div className="fixed inset-0 modal-overlay z-[9999] flex items-center justify-center p-4">
                         <div className="bg-white rounded-3xl shadow-xl w-full max-w-md p-8 border-t-4 border-success animate-fade-in-up">
                             <h3 className="text-xl font-black text-slate-800 uppercase tracking-widest mb-6">Tambah Manual</h3>
                             <div className="space-y-5 mb-8">
-                                <div><label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Nama Lengkap</label><input value={manualForm.name} onChange={e=>setManualForm({...manualForm, name: e.target.value})} className="w-full p-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-success outline-none text-sm font-semibold" autoFocus /></div>
-                                <div><label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Sekolah / Asal</label><input value={manualForm.school} onChange={e=>setManualForm({...manualForm, school: e.target.value})} className="w-full p-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-success outline-none text-sm font-semibold" /></div>
+                                <div><label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Nama Lengkap</label><input value={manualForm.name} onChange={e=>setManualForm({...manualForm, name: e.target.value})} className="w-full p-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-success outline-none text-[15px] font-semibold" autoFocus /></div>
+                                <div><label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Sekolah / Asal</label><input value={manualForm.school} onChange={e=>setManualForm({...manualForm, school: e.target.value})} className="w-full p-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-success outline-none text-[15px] font-semibold" /></div>
                             </div>
                             <div className="flex gap-3">
                                  <button onClick={()=>setShowAddManualModal(false)} className="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-black uppercase tracking-wider transition-colors">Batal</button>
@@ -1439,12 +1479,12 @@
                                     return (
                                         <tr key={t.code} className={`border-b transition-colors ${selectedTokens.includes(t.code) ? 'bg-primary-50/50' : 'bg-white'}`}>
                                             <td className="p-3 text-center"><input type="checkbox" className="w-4 h-4 cursor-pointer accent-primary-600 rounded" checked={selectedTokens.includes(t.code)} onChange={() => handleSelectToken(t.code)} /></td>
-                                            <td className="p-3 text-center text-slate-400 font-bold text-xs">{idx+1}</td>
+                                            <td className="p-3 text-center text-slate-400 font-bold text-[15px]">{idx+1}</td>
                                             <td className="p-3 space-y-2">
-                                                <input type="text" value={t.participant_name} onChange={e=>handleMassEditChange(originalIndex, 'participant_name', e.target.value)} className="w-full p-2.5 border border-slate-200 rounded-lg text-xs font-bold uppercase outline-none focus:border-primary-500 bg-slate-50"/>
-                                                <input type="text" value={t.participant_school} onChange={e=>handleMassEditChange(originalIndex, 'participant_school', e.target.value)} className="w-full p-2.5 border border-slate-200 rounded-lg text-xs font-semibold outline-none focus:border-primary-500 bg-slate-50"/>
+                                                <input type="text" value={t.participant_name} onChange={e=>handleMassEditChange(originalIndex, 'participant_name', e.target.value)} className="w-full p-2.5 border border-slate-200 rounded-lg text-[15px] font-bold uppercase outline-none focus:border-primary-500 bg-slate-50"/>
+                                                <input type="text" value={t.participant_school} onChange={e=>handleMassEditChange(originalIndex, 'participant_school', e.target.value)} className="w-full p-2.5 border border-slate-200 rounded-lg text-[14px] font-semibold outline-none focus:border-primary-500 bg-slate-50"/>
                                             </td>
-                                            <td className="p-3 font-mono font-bold text-slate-400 text-xs tracking-widest">{t.code}</td>
+                                            <td className="p-3 font-mono font-bold text-slate-400 text-[15px] tracking-widest">{t.code}</td>
                                             <td className="p-3">
                                                 <select value={t.status} onChange={e=>handleMassEditChange(originalIndex, 'status', e.target.value)} className="w-full p-2.5 border border-slate-200 rounded-lg text-[10px] font-black uppercase tracking-wider outline-none cursor-pointer bg-slate-50 text-slate-700">
                                                     <option value="AVAILABLE">AVAILABLE</option><option value="USED">USED</option><option value="EXPIRED">EXPIRED</option>
@@ -1457,20 +1497,20 @@
                                 actualTokens.map((t, i) => (
                                     <tr key={t.code} className={`border-b border-slate-50 transition-colors ${selectedTokens.includes(t.code) ? 'bg-primary-50/30' : 'hover:bg-slate-50'}`}>
                                         <td className="py-4 px-4 text-center"><input type="checkbox" className="w-4 h-4 cursor-pointer accent-primary-600 rounded" checked={selectedTokens.includes(t.code)} onChange={() => handleSelectToken(t.code)} /></td>
-                                        <td className="py-4 px-4 text-center text-slate-400 font-bold text-xs">{i+1}</td>
+                                        <td className="py-4 px-4 text-center text-slate-400 font-bold text-[15px]">{i+1}</td>
                                         <td className="py-4 px-4">
-                                            <div className="font-bold text-slate-800 uppercase text-sm mb-1">{t.participant_name || '-'}</div>
-                                            <div className="text-xs text-slate-500 font-medium">{t.participant_school || '-'}</div>
+                                            <div className="font-bold text-slate-800 uppercase text-[16px] mb-1">{t.participant_name || '-'}</div>
+                                            <div className="text-[14px] text-slate-500 font-medium">{t.participant_school || '-'}</div>
                                         </td>
                                         <td className="py-4 px-4">
-                                            <span className="font-mono font-bold text-primary-700 bg-primary-50 border border-primary-100 px-3 py-1.5 rounded-lg tracking-widest text-sm">{t.code}</span>
+                                            <span className="font-mono font-bold text-primary-700 bg-primary-50 border border-primary-100 px-3 py-1.5 rounded-lg tracking-widest text-[15px]">{t.code}</span>
                                         </td>
                                         <td className="py-4 px-4 text-center"><span className={`px-3 py-1.5 text-[9px] font-black rounded-lg uppercase tracking-widest ${t.status === 'AVAILABLE' ? 'bg-success/20 text-success-700' : t.status === 'USED' ? 'bg-rose-100 text-rose-700' : 'bg-slate-200 text-slate-600'}`}>{t.status}</span></td>
                                         <td className="py-4 px-4 text-center"><button onClick={()=>deleteToken(t.code)} className="text-slate-400 p-2 hover:bg-rose-100 hover:text-rose-600 rounded-xl transition-colors"><Trash2 size={16}/></button></td>
                                     </tr>
                                 ))
                             )}
-                            {(isMassEdit ? displayedMassEditTokens : actualTokens).length === 0 && <tr><td colSpan={isMassEdit ? 6 : 7} className="text-center py-16 text-slate-400 text-sm font-medium">Data kosong.</td></tr>}
+                            {(isMassEdit ? displayedMassEditTokens : actualTokens).length === 0 && <tr><td colSpan={isMassEdit ? 6 : 7} className="text-center py-16 text-slate-400 text-[15px] font-medium">Data kosong.</td></tr>}
                         </tbody>
                     </table>
                  </div>
@@ -1493,7 +1533,7 @@
 
              const deleteResult = async (id) => {
                  showConfirm("Hapus hasil ujian peserta ini secara permanen?", async () => {
-                     try { const db = await getSupabase(); await db.from('results').delete().eq('id', id); fetchSupabaseData(); } catch(e) { showAlert(e.message); }
+                     try { const db = await getSupabase(); await db.from('results').delete().eq('id', id); fetchSupabaseData(); showAlert("Data dihapus."); } catch(e) { showAlert(e.message); }
                  });
              };
 
@@ -1506,6 +1546,7 @@
                          const { error } = await db.from('results').delete().in('id', selectedResults);
                          if (error) throw error;
                          await fetchSupabaseData(); setSelectedResults([]); 
+                         showAlert("Data terpilih berhasil dihapus.");
                      } catch (err) { showAlert(err.message); } finally { setIsDeleting(false); }
                  });
              };
@@ -1516,7 +1557,7 @@
                      <div className="flex flex-wrap items-center gap-4 w-full sm:w-auto">
                          <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl p-1">
                              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 pl-3">Asal Sekolah:</span>
-                             <select value={filterSchool} onChange={e=>setFilterSchool(e.target.value)} className="w-full sm:w-auto p-2.5 text-xs font-bold bg-transparent outline-none cursor-pointer text-slate-800">
+                             <select value={filterSchool} onChange={e=>setFilterSchool(e.target.value)} className="w-full sm:w-auto p-2.5 text-[14px] font-bold bg-transparent outline-none cursor-pointer text-slate-800">
                                  {schoolList.map(s => <option key={s} value={s}>{s}</option>)}
                              </select>
                          </div>
@@ -1528,20 +1569,20 @@
                          )}
                      </div>
                      <div className="flex gap-3 w-full sm:w-auto">
-                         <button onClick={fetchSupabaseData} className="bg-white text-slate-600 border border-slate-200 px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center hover:bg-slate-50 transition-colors shadow-sm" title="Segarkan Data">
+                         <button onClick={fetchSupabaseData} className="bg-white text-slate-600 border border-slate-200 px-4 py-3 rounded-xl text-[15px] font-bold flex items-center justify-center hover:bg-slate-50 transition-colors shadow-sm" title="Segarkan Data">
                              <i className="fas fa-sync-alt"></i>
                          </button>
                      </div>
                  </div>
 
                  {selectedAnalysis && (
-                    <div className="fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
+                    <div className="fixed inset-0 modal-overlay z-[9999] flex items-center justify-center p-4 font-sans">
                         <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden border-t-4 border-primary-600 animate-fade-in-up">
                             <div className="bg-primary-800 px-8 py-6 flex justify-between items-center relative overflow-hidden">
                                 <div className="absolute right-0 top-0 opacity-10"><Database size={100}/></div>
                                 <div className="relative z-10">
-                                    <h3 className="font-black text-white text-xl uppercase tracking-widest mb-1">Lembar Koreksi Detail</h3>
-                                    <p className="text-primary-200 font-bold text-sm">{selectedAnalysis.participant?.name} &bull; {selectedAnalysis.participant?.school}</p>
+                                    <h3 className="font-black text-white text-[20px] uppercase tracking-widest mb-1">Lembar Koreksi Detail</h3>
+                                    <p className="text-primary-200 font-bold text-[15px]">{selectedAnalysis.participant?.name} &bull; {selectedAnalysis.participant?.school}</p>
                                 </div>
                                 <button onClick={() => setSelectedAnalysis(null)} className="text-primary-300 hover:text-white bg-white/10 p-2.5 rounded-xl relative z-10 transition-colors"><X size={20}/></button>
                             </div>
@@ -1561,13 +1602,13 @@
                                             const d = details.find(x => x.qId === q.id);
                                             if (!d) return null;
 
-                                            let ansDisplay = <span className="text-slate-400 italic font-medium text-xs">Kosong / Tidak Dijawab</span>;
+                                            let ansDisplay = <span className="text-slate-400 italic font-medium text-[14px]">Kosong / Tidak Dijawab</span>;
                                             let keyDisplay = null;
                                             
                                             if (q.type === 'MCQ') {
                                                 const correctOpt = q.options?.find(o => o.id === q.correctAnswer);
                                                 const tmpK = document.createElement("div"); tmpK.innerHTML = correctOpt?.text || q.correctAnswer;
-                                                keyDisplay = <div className="mt-4 p-3 bg-success/10 rounded-xl border border-success/20 text-xs text-slate-700 font-medium"><strong className="text-success-700 bg-success/20 px-2 py-0.5 rounded text-[10px] uppercase mr-2">{q.correctAnswer}</strong> {tmpK.textContent}</div>;
+                                                keyDisplay = <div className="mt-4 p-3 bg-success/10 rounded-xl border border-success/20 text-[14px] text-slate-700 font-medium"><strong className="text-success-700 bg-success/20 px-2 py-0.5 rounded text-[10px] uppercase mr-2">{q.correctAnswer}</strong> {tmpK.textContent}</div>;
                                                 
                                                 if (!d.isEmpty && d.userAnswer) {
                                                     const opt = q.options?.find(o => o.id === d.userAnswer);
@@ -1575,31 +1616,31 @@
                                                     ansDisplay = <div className="font-semibold text-slate-800 p-3 bg-white rounded-xl border border-slate-200 shadow-sm leading-relaxed"><strong className="text-primary-700 bg-primary-50 px-2 py-0.5 rounded text-[10px] mr-2">{d.userAnswer}</strong> {tmp.textContent}</div>;
                                                 }
                                             } else if (q.type === 'SHORT') {
-                                                keyDisplay = <div className="mt-4 p-3 bg-success/10 rounded-xl border border-success/20 text-xs text-slate-700 font-medium"><strong className="text-success-700 bg-success/20 px-2 py-0.5 rounded text-[10px] uppercase mr-2">Jawaban Valid:</strong> {q.correctAnswer}</div>;
+                                                keyDisplay = <div className="mt-4 p-3 bg-success/10 rounded-xl border border-success/20 text-[14px] text-slate-700 font-medium"><strong className="text-success-700 bg-success/20 px-2 py-0.5 rounded text-[10px] uppercase mr-2">Jawaban Valid:</strong> {q.correctAnswer}</div>;
                                                 if (!d.isEmpty && d.userAnswer) { ansDisplay = <div className="font-semibold text-slate-800 p-3 bg-white rounded-xl border border-slate-200 shadow-sm">{d.userAnswer}</div>; }
                                             } else if (q.type === 'ESSAY') {
-                                                keyDisplay = <div className="mt-4 p-3 bg-secondary/10 rounded-xl border border-secondary/20 text-xs text-slate-700 font-medium"><strong className="text-secondary-700 bg-secondary/20 px-2 py-0.5 rounded text-[10px] uppercase mr-2">Rubrik Penilaian:</strong> Penilaian manual oleh pendidik.</div>;
-                                                if (!d.isEmpty && d.userAnswer) { ansDisplay = <div className="font-medium text-slate-700 p-4 bg-white rounded-xl border border-slate-200 shadow-sm whitespace-pre-wrap text-xs leading-relaxed">{d.userAnswer}</div>; }
+                                                keyDisplay = <div className="mt-4 p-3 bg-secondary/10 rounded-xl border border-secondary/20 text-[14px] text-slate-700 font-medium"><strong className="text-secondary-700 bg-secondary/20 px-2 py-0.5 rounded text-[10px] uppercase mr-2">Rubrik Penilaian:</strong> Penilaian manual oleh pendidik.</div>;
+                                                if (!d.isEmpty && d.userAnswer) { ansDisplay = <div className="font-medium text-slate-700 p-4 bg-white rounded-xl border border-slate-200 shadow-sm whitespace-pre-wrap text-[14px] leading-relaxed">{d.userAnswer}</div>; }
                                             }
 
                                             const earned = d.pointsEarned || 0;
                                             const maxP = d.questionMaxPoints || 1;
 
                                             return (
-                                                <tr key={q.id} className="border-b border-slate-200 bg-white">
-                                                    <td className="p-6 text-center font-black text-slate-300 align-top text-xl">{i + 1}</td>
+                                                <tr key={q.id} className="border-b border-slate-200 bg-white font-sans">
+                                                    <td className="p-6 text-center font-black text-slate-300 align-top text-[20px]">{i + 1}</td>
                                                     <td className="p-6 align-top">
                                                         <div className="flex items-center gap-2 mb-3">
                                                             <span className="text-[9px] font-black uppercase tracking-widest bg-slate-100 text-slate-500 px-2 py-1 rounded">{q.type}</span>
                                                             <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded ${q.difficulty==='Sulit'?'bg-rose-50 text-rose-600':q.difficulty==='Sedang'?'bg-primary-50 text-primary-600':'bg-success/10 text-success-700'}`}>{q.difficulty || 'Mudah'}</span>
                                                         </div>
-                                                        <div className="text-slate-800 text-sm font-medium leading-relaxed rich-text-content" dangerouslySetInnerHTML={{__html: q.question}} />
+                                                        <div className="text-slate-800 text-[16px] font-reading leading-[1.8] rich-text-content" dangerouslySetInnerHTML={{__html: q.question}} />
                                                         {keyDisplay}
                                                     </td>
                                                     <td className="p-6 align-top border-l border-slate-100 bg-slate-50/50">{ansDisplay}</td>
                                                     <td className="p-6 text-center align-top border-l border-slate-100">
                                                         <div className="flex flex-col items-center justify-center h-full">
-                                                            <span className="font-black text-slate-800 text-2xl">{earned}</span>
+                                                            <span className="font-black text-slate-800 text-[24px]">{earned}</span>
                                                             <span className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mb-3">dari {maxP} pt</span>
                                                             {q.type === 'ESSAY' ? (
                                                                 <span className="text-[9px] font-black px-3 py-1.5 rounded-lg uppercase tracking-widest bg-secondary/20 text-secondary-800">Tunda Koreksi</span>
@@ -1619,7 +1660,7 @@
                  )}
                  
                  <div className="bg-white rounded-3xl border overflow-hidden shadow-sm">
-                    <table className="w-full text-left text-sm">
+                    <table className="w-full text-left text-[15px]">
                         <thead className="bg-slate-50">
                             <tr>
                                 <th className="py-5 px-4 text-center w-12 border-b">
@@ -1642,17 +1683,17 @@
                                         <input type="checkbox" className="w-4 h-4 cursor-pointer accent-primary-600 rounded" checked={selectedResults.includes(r.id)} onChange={() => handleSelectResult(r.id)} />
                                     </td>
                                     <td className="py-4 px-4 text-center">
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black mx-auto ${idx < 3 ? 'bg-secondary/20 text-secondary-700' : 'bg-slate-100 text-slate-400'}`}>{idx + 1}</div>
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black mx-auto text-[16px] ${idx < 3 ? 'bg-secondary/20 text-secondary-700' : 'bg-slate-100 text-slate-400'}`}>{idx + 1}</div>
                                     </td>
                                     <td className="py-4 px-4">
-                                        <div className="font-black text-slate-800 uppercase tracking-wide text-sm">{r.participant?.name}</div>
-                                        <div className="font-bold text-slate-500 text-xs mt-0.5">{r.participant?.school}</div>
+                                        <div className="font-black text-slate-800 uppercase tracking-wide text-[16px]">{r.participant?.name}</div>
+                                        <div className="font-bold text-slate-500 text-[14px] mt-0.5">{r.participant?.school}</div>
                                     </td>
                                     <td className="py-4 px-4 text-center">
-                                        <span className="font-black text-slate-800 text-xl">{r.score}</span>
+                                        <span className="font-black text-slate-800 text-[20px]">{r.score}</span>
                                     </td>
                                     <td className="py-4 px-4 text-center">
-                                        <div className="font-black text-lg text-slate-800">{(s.ito||0).toFixed(1)}</div>
+                                        <div className="font-black text-[18px] text-slate-800">{(s.ito||0).toFixed(1)}</div>
                                         <div className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded mt-1 inline-block ${cat.color} border`}>{cat.label}</div>
                                     </td>
                                     <td className="py-4 px-4 text-center">
@@ -1663,7 +1704,7 @@
                                     </td>
                                 </tr>
                             )})}
-                            {rankedResults.length === 0 && <tr><td colSpan="6" className="text-center p-12 text-slate-400 font-bold text-sm uppercase tracking-widest bg-slate-50">Belum Ada Hasil Ujian Masuk</td></tr>}
+                            {rankedResults.length === 0 && <tr><td colSpan="6" className="text-center p-12 text-slate-400 font-bold text-[15px] uppercase tracking-widest bg-slate-50">Belum Ada Hasil Ujian Masuk</td></tr>}
                         </tbody>
                     </table>
                  </div>
@@ -1696,12 +1737,13 @@
                  else { const { error } = await db.from('questions').update(payload).eq('id', payload.id); if (error) throw error; }
                  
                  setFilterFolder(payload.folder); setView('list'); await fetchSupabaseData(); 
+                 showAlert("Soal berhasil disimpan ke dalam bank soal.");
                } catch (err) { showAlert("GAGAL MENYIMPAN KE DATABASE!\n" + err.message); } finally { setIsSaving(false); }
             };
 
             const deleteQuestion = async (id) => {
-                showConfirm("Hapus soal dari bank soal?", async () => {
-                    try { const db = await getSupabase(); const { error } = await db.from('questions').delete().eq('id', id); if (error) throw error; setView('list'); await fetchSupabaseData(); } catch(e) { showAlert(e.message); }
+                showConfirm("Hapus soal dari bank soal secara permanen?", async () => {
+                    try { const db = await getSupabase(); const { error } = await db.from('questions').delete().eq('id', id); if (error) throw error; setView('list'); await fetchSupabaseData(); showAlert("Soal terhapus."); } catch(e) { showAlert(e.message); }
                 });
             };
 
@@ -1711,6 +1753,7 @@
                     const db = await getSupabase(); const duplicatedQ = { ...q, id: `q${Date.now()}_copy` };
                     const { error } = await db.from('questions').insert([duplicatedQ]); if (error) throw error;
                     setFilterFolder(q.folder || filterFolder); setView('list'); await fetchSupabaseData(); 
+                    showAlert("Duplikasi soal berhasil.");
                 } catch(e) { showAlert(e.message); } setIsSaving(false);
             };
 
@@ -1730,7 +1773,7 @@
             if (folderStats['Utama'] === undefined) folderStats['Utama'] = 0;
 
             const createFolder = async () => {
-                showPrompt("Nama Paket Soal Baru:", async (fname) => {
+                showPrompt("Ketikkan Nama Paket Soal Baru:", async (fname) => {
                     if (fname && fname.trim() !== '') {
                         setIsSaving(true);
                         try {
@@ -1738,6 +1781,7 @@
                             const { error } = await db.from('tokens').insert([{ code: `SYS_FOLDER_${Date.now()}`, status: fname.trim(), generatedAt: new Date().toISOString(), participant_name: 'SYSTEM_FOLDER' }]);
                             if (error) throw error;
                             await fetchSupabaseData(); setFilterFolder(fname.trim()); setView('list');
+                            showAlert("Paket baru berhasil dibuat.");
                         } catch(e) { showAlert(e.message); } setIsSaving(false);
                     }
                 });
@@ -1754,6 +1798,7 @@
                             const { error: err2 } = await db.from('questions').update({ folder: newName.trim() }).eq('folder', oldName); if (err2) throw err2;
                             if (activeFolder === oldName) { const { error: err3 } = await db.from('tokens').update({ status: newName.trim() }).eq('code', 'SYS_SETTING_FOLDER'); if (err3) throw err3; setActiveFolder(newName.trim()); }
                             await fetchSupabaseData(); setFilterFolder(newName.trim());
+                            showAlert("Nama paket berhasil diperbarui.");
                         } catch(e) { showAlert(e.message); } setIsSaving(false);
                     }
                 }, oldName);
@@ -1761,7 +1806,7 @@
 
             const deleteFolder = async (fname) => {
                 if (fname === 'Utama') return showAlert("Folder Utama dilarang dihapus.");
-                showConfirm(`Hapus permanen paket "${fname}" beserta isinya?`, async () => {
+                showConfirm(`Hapus permanen paket "${fname}" beserta seluruh isinya?`, async () => {
                     setIsSaving(true);
                     try {
                         const db = await getSupabase();
@@ -1770,6 +1815,7 @@
                         const { error: err2 } = await db.from('questions').delete().eq('folder', fname); if (err2) throw err2;
                         if (activeFolder === fname) { const { error: err3 } = await db.from('tokens').update({ status: 'Utama' }).eq('code', 'SYS_SETTING_FOLDER'); if (err3) throw err3; setActiveFolder('Utama'); }
                         await fetchSupabaseData(); setFilterFolder('Utama'); setView('folders');
+                        showAlert("Paket dan isinya terhapus bersih.");
                     } catch(e) { showAlert(e.message); } setIsSaving(false);
                 });
             };
@@ -1778,9 +1824,9 @@
                const availableFolders = [...new Set([...questions.map(q => q.folder || 'Utama'), ...tokens.filter(t => t.code && t.code.startsWith('SYS_FOLDER_')).map(t => t.status), filterFolder, 'Utama'])];
                return (
                  <AdminLayout title="Authoring Soal Olimpiade">
-                    <div className="bg-white rounded-3xl shadow-xl border border-slate-200 max-w-4xl mx-auto p-8 sm:p-10 mb-10 border-t-4 border-primary-800 relative overflow-hidden">
+                    <div className="bg-white rounded-3xl shadow-xl border border-slate-200 max-w-4xl mx-auto p-8 sm:p-10 mb-10 border-t-4 border-primary-800 relative overflow-hidden font-sans">
                         <div className="absolute top-0 right-0 p-10 opacity-5 pointer-events-none"><Edit size={120}/></div>
-                        <h3 className="text-xl font-black text-slate-800 uppercase tracking-widest mb-8 border-b-2 border-slate-100 pb-4 relative z-10">Form Penyusunan Soal</h3>
+                        <h3 className="text-[20px] font-black text-slate-800 uppercase tracking-widest mb-8 border-b-2 border-slate-100 pb-4 relative z-10">Form Penyusunan Soal</h3>
                         <form onSubmit={saveQuestion} className="space-y-8 relative z-10">
                             
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50 p-6 rounded-2xl border border-slate-200">
@@ -1791,7 +1837,7 @@
                                         if(t === 'MCQ') setFormData({...defaultMCQ, difficulty: formData.difficulty, folder: formData.folder, question: formData.question});
                                         else if(t === 'SHORT') setFormData({...defaultSHORT, difficulty: formData.difficulty, folder: formData.folder, question: formData.question});
                                         else if(t === 'ESSAY') setFormData({...defaultESSAY, difficulty: formData.difficulty, folder: formData.folder, question: formData.question});
-                                    }} className="w-full p-3.5 border-2 border-slate-200 rounded-xl bg-white text-sm font-bold focus:border-primary-500 outline-none transition-colors cursor-pointer text-slate-700">
+                                    }} className="w-full p-3.5 border-2 border-slate-200 rounded-xl bg-white text-[14px] font-bold focus:border-primary-500 outline-none transition-colors cursor-pointer text-slate-700">
                                         <option value="MCQ">Pilihan Ganda (A-D)</option>
                                         <option value="SHORT">Isian Singkat</option>
                                         <option value="ESSAY">Uraian / Essay</option>
@@ -1799,7 +1845,7 @@
                                 </div>
                                 <div>
                                     <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Tingkat Kesulitan (Bobot)</label>
-                                    <select value={formData.difficulty} onChange={e => setFormData({...formData, difficulty: e.target.value})} className="w-full p-3.5 border-2 border-slate-200 rounded-xl bg-white text-sm font-bold focus:border-primary-500 outline-none transition-colors cursor-pointer text-slate-700">
+                                    <select value={formData.difficulty} onChange={e => setFormData({...formData, difficulty: e.target.value})} className="w-full p-3.5 border-2 border-slate-200 rounded-xl bg-white text-[14px] font-bold focus:border-primary-500 outline-none transition-colors cursor-pointer text-slate-700">
                                         <option value="Mudah">MUDAH (Bobot 1.00)</option>
                                         <option value="Sedang">SEDANG (Bobot 1.25)</option>
                                         <option value="Sulit">SULIT (Bobot 1.50)</option>
@@ -1807,41 +1853,41 @@
                                 </div>
                                 <div>
                                     <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Paket Penempatan</label>
-                                    <select value={formData.folder || filterFolder} onChange={e => setFormData({...formData, folder: e.target.value})} className="w-full p-3.5 border-2 border-slate-200 rounded-xl bg-white text-sm font-bold focus:border-primary-500 outline-none transition-colors cursor-pointer text-slate-700">
+                                    <select value={formData.folder || filterFolder} onChange={e => setFormData({...formData, folder: e.target.value})} className="w-full p-3.5 border-2 border-slate-200 rounded-xl bg-white text-[14px] font-bold focus:border-primary-500 outline-none transition-colors cursor-pointer text-slate-700">
                                         {availableFolders.map(f => <option key={f} value={f}>{f}</option>)}
                                     </select>
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-black text-slate-800 uppercase tracking-widest mb-3 flex items-center"><div className="w-6 h-6 bg-primary-800 text-white rounded flex items-center justify-center mr-2 text-xs">Q</div> Redaksi Pertanyaan</label>
+                                <label className="block text-[14px] font-black text-slate-800 uppercase tracking-widest mb-3 flex items-center"><div className="w-6 h-6 bg-primary-800 text-white rounded flex items-center justify-center mr-2 text-xs">Q</div> Redaksi Pertanyaan</label>
                                 <RichTextEditor value={formData.question} onChange={val => setFormData({...formData, question: val})} showPrompt={showPrompt} />
                             </div>
 
                             {formData.type === 'MCQ' && (
                                 <div className="space-y-6 pt-6 border-t-2 border-slate-100">
-                                    <h3 className="font-black text-slate-800 uppercase tracking-widest text-sm mb-4">Redaksi Opsi Jawaban</h3>
+                                    <h3 className="font-black text-slate-800 uppercase tracking-widest text-[14px] mb-4">Redaksi Opsi Jawaban</h3>
                                     {formData.options.map((opt, idx) => (
                                         <div key={opt.id} className="flex gap-4 items-start">
-                                            <span className="font-black w-10 pt-3 text-2xl text-slate-300 text-right">{opt.id}.</span>
+                                            <span className="font-black w-10 pt-3 text-[20px] text-slate-300 text-right">{opt.id}.</span>
                                             <div className="flex-1">
                                                 <RichTextEditor minHeight="60px" value={opt.text} onChange={val => { const o = [...formData.options]; o[idx].text = val; setFormData({...formData, options: o}); }} showPrompt={showPrompt} />
                                             </div>
                                         </div>
                                     ))}
                                     <div className="bg-success/10 p-6 rounded-2xl border-2 border-success/20 mt-6 flex items-center justify-between shadow-inner">
-                                        <label className="font-black uppercase tracking-widest text-success-800 text-sm"><CheckCircle size={18} className="inline mr-2"/> Kunci Benar:</label>
-                                        <select value={formData.correctAnswer} onChange={e => setFormData({...formData, correctAnswer: e.target.value})} className="p-3 border-2 border-success-400 rounded-xl font-black text-success-700 text-xl w-32 text-center bg-white outline-none cursor-pointer focus:ring-4 focus:ring-success/20 transition-all"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select>
+                                        <label className="font-black uppercase tracking-widest text-success-800 text-[14px]"><CheckCircle size={18} className="inline mr-2"/> Kunci Benar:</label>
+                                        <select value={formData.correctAnswer} onChange={e => setFormData({...formData, correctAnswer: e.target.value})} className="p-3 border-2 border-success-400 rounded-xl font-black text-success-700 text-[20px] w-32 text-center bg-white outline-none cursor-pointer focus:ring-4 focus:ring-success/20 transition-all"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select>
                                     </div>
                                 </div>
                             )}
 
                             {formData.type === 'SHORT' && (
                                 <div className="space-y-6 pt-6 border-t-2 border-slate-100">
-                                    <h3 className="font-black text-slate-800 uppercase tracking-widest text-sm mb-4">Kunci Isian Singkat</h3>
+                                    <h3 className="font-black text-slate-800 uppercase tracking-widest text-[14px] mb-4">Kunci Isian Singkat</h3>
                                     <div className="bg-primary-50 p-6 rounded-2xl border-2 border-primary-100">
                                         <label className="block text-xs font-bold text-primary-800 mb-3">Teks atau Angka Pasti (Sistem akan cek kecocokan huruf, tanpa membedakan besar-kecil)</label>
-                                        <input type="text" value={formData.correctAnswer} onChange={e => setFormData({...formData, correctAnswer: e.target.value})} placeholder="Misal: 105 atau Jakarta" className="w-full p-4 border-2 border-primary-200 rounded-xl text-lg font-black text-primary-900 bg-white focus:border-primary-500 outline-none" required/>
+                                        <input type="text" value={formData.correctAnswer} onChange={e => setFormData({...formData, correctAnswer: e.target.value})} placeholder="Misal: 105 atau Jakarta" className="w-full p-4 border-2 border-primary-200 rounded-xl text-[20px] font-black text-primary-900 bg-white focus:border-primary-500 outline-none" required/>
                                     </div>
                                 </div>
                             )}
@@ -1850,7 +1896,7 @@
                                 <div className="space-y-6 pt-6 border-t-2 border-slate-100">
                                     <div className="bg-secondary/10 p-6 rounded-2xl border-2 border-secondary/30 border-dashed text-center">
                                         <FileText size={40} className="mx-auto text-secondary-300 mb-3"/>
-                                        <h3 className="font-black text-secondary-800 uppercase tracking-widest text-sm mb-1">Mode Soal Uraian</h3>
+                                        <h3 className="font-black text-secondary-800 uppercase tracking-widest text-[14px] mb-1">Mode Soal Uraian</h3>
                                         <p className="text-secondary-700 text-xs font-semibold">Tipe soal ini memerlukan koreksi/penilaian rubrik manual oleh pendidik setelah ujian selesai.</p>
                                     </div>
                                 </div>
@@ -1870,21 +1916,21 @@
               const folderQuestions = questions.filter(q => String(q.folder || 'Utama').trim().toLowerCase() === filterFolder.toLowerCase());
               return (
                 <AdminLayout title={`Paket: ${filterFolder}`}>
-                  <div className="mb-8 flex justify-between items-center bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+                  <div className="mb-8 flex justify-between items-center bg-white p-5 rounded-3xl border border-slate-200 shadow-sm font-sans">
                      <button onClick={() => setView('folders')} className="border-2 border-slate-200 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest flex items-center hover:bg-slate-50 text-slate-700 transition-colors"><ChevronLeft size={16} className="mr-2"/> Kembali</button>
-                     <div className="text-right"><span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1">Total Butir</span><span className="text-xl font-black text-slate-800">{folderQuestions.length}</span></div>
+                     <div className="text-right"><span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1">Total Butir</span><span className="text-[20px] font-black text-slate-800">{folderQuestions.length}</span></div>
                   </div>
                   
                   <div className="space-y-6">
                     {folderQuestions.map((q, idx) => (
-                       <div key={q.id} className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-start gap-6 hover:border-primary-300 transition-all group">
+                       <div key={q.id} className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-start gap-6 hover:border-primary-300 transition-all group font-sans">
                          <div className="flex-1 w-full overflow-hidden">
                              <div className="flex flex-wrap items-center gap-2 mb-4">
                                  <span className="text-xs font-black bg-primary-800 text-white px-3 py-1.5 rounded-lg tracking-wider">NO. {idx+1}</span>
                                  <span className="text-[10px] font-black bg-slate-100 text-slate-500 px-3 py-1.5 rounded uppercase tracking-widest border border-slate-200">{q.type}</span>
                                  <span className={`text-[10px] font-black px-3 py-1.5 rounded uppercase tracking-widest ${q.difficulty==='Sulit'?'bg-rose-100 text-rose-700':q.difficulty==='Sedang'?'bg-primary-100 text-primary-700':'bg-success/20 text-success-800'}`}>{q.difficulty || 'Mudah'}</span>
                              </div>
-                             <div className="mt-2 text-slate-800 font-medium rich-text-content text-sm leading-relaxed" dangerouslySetInnerHTML={{__html: q.question}}></div>
+                             <div className="mt-2 text-slate-800 font-reading text-[16px] leading-[1.8] rich-text-content" dangerouslySetInnerHTML={{__html: q.question}}></div>
                          </div>
                          <div className="flex sm:flex-col gap-3 shrink-0 w-full sm:w-auto border-t sm:border-t-0 sm:border-l border-slate-100 pt-4 sm:pt-0 sm:pl-6">
                             <button onClick={() => duplicateQuestion(q)} className="bg-slate-50 text-slate-600 hover:bg-slate-100 p-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center border border-slate-200 flex-1 sm:flex-none transition-colors"><Copy size={16} className="sm:mr-2"/> <span className="hidden sm:inline">Gandakan</span></button>
@@ -1893,7 +1939,7 @@
                          </div>
                        </div>
                     ))}
-                    {folderQuestions.length === 0 && <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-slate-300"><FileText size={60} className="mx-auto mb-5 text-slate-200"/><h3 className="text-xl font-black text-slate-400 uppercase tracking-widest">Kosong</h3><p className="text-xs font-bold text-slate-400 mt-2">Gunakan tombol + untuk menambah data soal</p></div>}
+                    {folderQuestions.length === 0 && <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-slate-300 font-sans"><FileText size={60} className="mx-auto mb-5 text-slate-200"/><h3 className="text-[20px] font-black text-slate-400 uppercase tracking-widest">Kosong</h3><p className="text-[14px] font-bold text-slate-400 mt-2">Gunakan tombol + untuk menambah data soal</p></div>}
                   </div>
                   <button onClick={() => {setFormData({...defaultMCQ, folder: filterFolder}); setView('create');}} className="fixed bottom-8 right-8 bg-secondary text-white w-16 h-16 rounded-2xl flex items-center justify-center shadow-xl hover:-translate-y-2 hover:shadow-2xl transition-all z-40"><Plus size={32}/></button>
                 </AdminLayout>
@@ -1902,10 +1948,10 @@
 
             return (
               <AdminLayout title="Manajemen Paket Soal">
-                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 font-sans">
                     <div onClick={createFolder} className="bg-white border-2 border-dashed border-slate-300 rounded-3xl p-8 flex flex-col items-center justify-center cursor-pointer min-h-[220px] hover:border-primary-400 hover:bg-primary-50/50 transition-colors group">
                         <div className="w-16 h-16 bg-slate-100 text-slate-400 group-hover:bg-primary-100 group-hover:text-primary-600 rounded-2xl flex items-center justify-center mb-5 transition-colors"><Plus size={32}/></div>
-                        <span className="font-black text-slate-600 group-hover:text-primary-700 text-sm uppercase tracking-widest">Buat Paket Baru</span>
+                        <span className="font-black text-slate-600 group-hover:text-primary-700 text-[14px] uppercase tracking-widest">Buat Paket Baru</span>
                     </div>
                     {Object.entries(folderStats).map(([fname, count]) => {
                         const isPublished = activeFolder.toLowerCase() === fname.toLowerCase();
@@ -1913,7 +1959,7 @@
                         <div key={fname} className={`bg-white border-2 rounded-3xl p-8 flex flex-col justify-between shadow-sm min-h-[220px] relative overflow-hidden transition-all hover:shadow-md ${isPublished ? 'border-secondary ring-4 ring-secondary/10' : 'border-slate-200'}`}>
                             {isPublished && <div className="absolute top-0 right-0 bg-secondary text-white text-[9px] font-black px-4 py-1.5 rounded-bl-xl uppercase tracking-widest shadow-sm">AKTIF</div>}
                             <div className="pt-2">
-                                <h4 className="font-black text-2xl text-slate-800 mb-3 truncate" title={fname}>{fname}</h4>
+                                <h4 className="font-black text-[24px] text-slate-800 mb-3 truncate" title={fname}>{fname}</h4>
                                 <div className="text-[10px] text-slate-500 font-black uppercase tracking-widest bg-slate-100 inline-block px-3 py-1.5 rounded-md border border-slate-200"><Database size={12} className="inline mr-1 text-slate-400"/> {count} Komponen Soal</div>
                             </div>
                             <div className="mt-8 flex flex-col gap-3">
@@ -1949,6 +1995,7 @@
                         const { error } = await db.from('results').delete().neq('participant_name', 'DELETE_ALL_DUMMY');
                         if (error) throw error;
                         await fetchSupabaseData();
+                        showAlert("Seluruh data hasil peserta berhasil dikosongkan.");
                     } catch(e) { showAlert(e.message); }
                     setIsDeleting(false);
                 });
@@ -2006,17 +2053,17 @@
                     <div className="bg-white rounded-2xl border border-slate-200 p-5 flex-1 w-full sm:w-auto shadow-sm flex flex-col sm:flex-row gap-5 items-start sm:items-center">
                        <div>
                            <h3 className="font-black text-slate-500 uppercase tracking-widest text-[10px] mb-2">Pilih Filter Paket</h3>
-                           <select value={filterFolder} onChange={e=>setFilterFolder(e.target.value)} className="border-2 border-slate-200 rounded-xl p-3 text-xs font-bold focus:border-primary-500 outline-none cursor-pointer bg-slate-50 text-slate-700">
+                           <select value={filterFolder} onChange={e=>setFilterFolder(e.target.value)} className="border-2 border-slate-200 rounded-xl p-3 text-[14px] font-bold focus:border-primary-500 outline-none cursor-pointer bg-slate-50 text-slate-700">
                                {availableFolders.map(f => <option key={f} value={f}>{f}</option>)}
                            </select>
                        </div>
                        <div className="sm:ml-auto text-left sm:text-right border-l-0 sm:border-l border-slate-100 sm:pl-6 pt-4 sm:pt-0 border-t sm:border-t-0 mt-2 sm:mt-0">
                            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Total Populasi Data</p>
-                           <p className="text-primary-800 text-3xl font-black">{results.length} <span className="text-sm font-bold text-slate-400 uppercase">Siswa</span></p>
+                           <p className="text-primary-800 text-[24px] font-black">{results.length} <span className="text-[14px] font-bold text-slate-400 uppercase">Siswa</span></p>
                        </div>
                     </div>
                     <div className="flex flex-wrap gap-3 w-full sm:w-auto">
-                        <button onClick={fetchSupabaseData} className="flex-1 sm:flex-none bg-white text-slate-600 border-2 border-slate-200 px-5 py-4 rounded-2xl text-sm font-bold flex items-center justify-center hover:bg-slate-50 transition-colors shadow-sm">
+                        <button onClick={fetchSupabaseData} className="flex-1 sm:flex-none bg-white text-slate-600 border-2 border-slate-200 px-5 py-4 rounded-2xl text-[14px] font-bold flex items-center justify-center hover:bg-slate-50 transition-colors shadow-sm">
                            <i className="fas fa-sync-alt"></i>
                         </button>
                         <button onClick={deleteAllResults} disabled={isDeleting || results.length === 0} className="w-full sm:w-auto bg-rose-50 text-rose-600 border border-rose-200 px-6 py-4 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-rose-100 disabled:opacity-50 transition-colors shadow-sm">
@@ -2027,7 +2074,7 @@
                 
                 <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm font-sans">
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm whitespace-nowrap">
+                        <table className="w-full text-left text-[14px] whitespace-nowrap">
                             <thead className="bg-slate-50 border-b border-slate-200">
                                 <tr>
                                     <th className="p-5 text-center w-12 text-[10px] font-black uppercase tracking-widest text-slate-400">ID</th>
@@ -2050,26 +2097,26 @@
                                             </div>
                                         </td>
                                         <td className="p-5 text-center">
-                                            <div className="flex items-center justify-center gap-1.5 font-black text-xs">
+                                            <div className="flex items-center justify-center gap-1.5 font-black text-[14px]">
                                                 <span className="text-success-700 bg-success/20 px-2 py-1 rounded w-8" title="Jumlah Benar">{d.correct}</span>
                                                 <span className="text-rose-600 bg-rose-50 px-2 py-1 rounded w-8" title="Jumlah Salah">{d.wrong}</span>
                                                 <span className="text-slate-500 bg-slate-100 px-2 py-1 rounded w-8" title="Tidak Dijawab">{d.empty}</span>
                                             </div>
                                         </td>
                                         <td className="p-5 text-center">
-                                            <div className="font-black text-success-600 mb-0.5">{d.percentage}% <span className="text-[9px] text-slate-400 uppercase tracking-widest">Benar</span></div>
-                                            <div className="font-black text-rose-600">{d.pSalah}% <span className="text-[9px] text-slate-400 uppercase tracking-widest">Salah</span></div>
+                                            <div className="font-black text-[16px] text-success-600 mb-0.5">{d.percentage}% <span className="text-[9px] text-slate-400 uppercase tracking-widest">Benar</span></div>
+                                            <div className="font-black text-[16px] text-rose-600">{d.pSalah}% <span className="text-[9px] text-slate-400 uppercase tracking-widest">Salah</span></div>
                                         </td>
                                         <td className="p-5 text-center">
                                             <div className={`text-[10px] uppercase tracking-wider font-bold px-3 py-1 rounded border inline-block shadow-sm ${d.difficulty.includes('Mudah') ? 'bg-success/10 text-success-700 border-success/20' : d.difficulty === 'Sedang' ? 'bg-primary-50 text-primary-600 border-primary-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>{d.difficulty}</div>
                                         </td>
                                         <td className="p-5 text-center">
-                                            <div className={`font-black text-lg mb-0.5 ${d.dpColor}`}>{d.dpRaw}</div>
+                                            <div className={`font-black text-[18px] mb-0.5 ${d.dpColor}`}>{d.dpRaw}</div>
                                             <div className={`text-[9px] uppercase tracking-wider font-bold ${d.dpColor}`}>{d.dpLabel}</div>
                                         </td>
                                     </tr>
                                 )})}
-                                {analysisData.length === 0 && <tr><td colSpan="6" className="text-center p-16 text-slate-400 font-bold uppercase tracking-widest text-xs bg-slate-50">Belum ada instrumen soal.</td></tr>}
+                                {analysisData.length === 0 && <tr><td colSpan="6" className="text-center p-16 text-slate-400 font-bold uppercase tracking-widest text-[14px] bg-slate-50">Belum ada instrumen soal.</td></tr>}
                             </tbody>
                         </table>
                     </div>
@@ -2096,7 +2143,7 @@
                    <div className="mb-8 flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm print:hidden">
                       <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Filter Institusi:</span>
-                         <select value={filterSchool} onChange={e=>setFilterSchool(e.target.value)} className="border-2 border-slate-200 rounded-xl p-3 text-xs font-bold bg-slate-50 outline-none cursor-pointer text-slate-700">
+                         <select value={filterSchool} onChange={e=>setFilterSchool(e.target.value)} className="border-2 border-slate-200 rounded-xl p-3 text-[14px] font-bold bg-slate-50 outline-none cursor-pointer text-slate-700">
                             {schoolList.map(s => <option key={s} value={s}>{s}</option>)}
                          </select>
                       </div>
@@ -2106,20 +2153,20 @@
                       </div>
                    </div>
                    
-                   <div className="bg-white border shadow-md mx-auto w-full max-w-[21.5cm] min-h-[33cm] p-10 sm:p-14 relative text-primary-900" style={{background: 'white'}}>
+                   <div className="bg-white border shadow-md mx-auto w-full max-w-[21.5cm] min-h-[33cm] p-10 sm:p-14 relative text-primary-900 font-sans" style={{background: 'white'}}>
                       <div className="text-center border-b-4 border-primary-800 pb-6 mb-8 mt-2">
-                         <h1 className="text-3xl font-black uppercase tracking-widest text-primary-800 mb-2">Rekapitulasi Hasil Olimpiade</h1>
+                         <h1 className="text-[24px] font-black uppercase tracking-widest text-primary-800 mb-2">Rekapitulasi Hasil Olimpiade</h1>
                          <p className="text-slate-600 font-bold tracking-wider">{organizerName}</p>
                       </div>
                       
-                      <div className="mb-10 grid grid-cols-2 md:grid-cols-4 gap-6 text-sm bg-slate-50 p-6 rounded-2xl border-2 border-slate-200">
-                         <div><p className="text-slate-500 text-[9px] font-black uppercase tracking-widest mb-1">Filter Institusi</p><p className="font-black text-primary-900 text-base">{filterSchool}</p></div>
-                         <div><p className="text-slate-500 text-[9px] font-black uppercase tracking-widest mb-1">Populasi</p><p className="font-black text-primary-900 text-base">{validCount} Siswa</p></div>
-                         <div><p className="text-slate-500 text-[9px] font-black uppercase tracking-widest mb-1">Rata-Rata (Mean)</p><p className="font-black text-primary-900 text-base">{meanScore.toFixed(2)}</p></div>
-                         <div><p className="text-slate-500 text-[9px] font-black uppercase tracking-widest mb-1">Deviasi Standar</p><p className="font-black text-primary-900 text-base">± {stdDeviation.toFixed(2)}</p></div>
+                      <div className="mb-10 grid grid-cols-2 md:grid-cols-4 gap-6 text-[14px] bg-slate-50 p-6 rounded-2xl border-2 border-slate-200">
+                         <div><p className="text-slate-500 text-[9px] font-black uppercase tracking-widest mb-1">Filter Institusi</p><p className="font-black text-primary-900 text-[16px]">{filterSchool}</p></div>
+                         <div><p className="text-slate-500 text-[9px] font-black uppercase tracking-widest mb-1">Populasi</p><p className="font-black text-primary-900 text-[16px]">{validCount} Siswa</p></div>
+                         <div><p className="text-slate-500 text-[9px] font-black uppercase tracking-widest mb-1">Rata-Rata (Mean)</p><p className="font-black text-primary-900 text-[16px]">{meanScore.toFixed(2)}</p></div>
+                         <div><p className="text-slate-500 text-[9px] font-black uppercase tracking-widest mb-1">Deviasi Standar</p><p className="font-black text-primary-900 text-[16px]">± {stdDeviation.toFixed(2)}</p></div>
                       </div>
                       
-                      <table className="w-full text-left border-collapse border-2 border-primary-800 text-xs font-semibold">
+                      <table className="w-full text-left border-collapse border-2 border-primary-800 text-[14px] font-semibold">
                          <thead className="bg-slate-100 uppercase font-black tracking-widest text-[9px] text-slate-700">
                             <tr className="border-b-2 border-primary-800">
                                 <th className="border-r border-primary-800 py-4 px-3 text-center w-12">Rnk</th>
@@ -2140,7 +2187,7 @@
                                   <td className="border-r border-primary-800 py-3 px-3 text-center font-black">{i+1}</td>
                                   <td className="border-r border-primary-800 py-3 px-3 uppercase">{r.participant?.name}</td>
                                   <td className="border-r border-primary-800 py-3 px-3">{r.participant?.school}</td>
-                                  <td className="border-r border-primary-800 py-3 px-3 text-center font-black text-sm">{r.score}</td>
+                                  <td className="border-r border-primary-800 py-3 px-3 text-center font-black text-[16px]">{r.score}</td>
                                   <td className="border-r border-primary-800 py-3 px-3 text-center font-black">{(s.ito||0).toFixed(1)}</td>
                                   <td className="py-3 px-3 text-center text-[10px] font-black">{cheats === 0 ? '-' : `${cheats}x`}</td>
                                </tr>
@@ -2148,7 +2195,7 @@
                             {processedResults.length === 0 && <tr><td colSpan="6" className="text-center py-16 text-slate-500 font-bold uppercase tracking-widest">Tidak ada data.</td></tr>}
                          </tbody>
                       </table>
-                      <div className="mt-24 flex justify-end text-center text-primary-900 font-bold text-xs uppercase tracking-widest"><div><p className="mb-24">Mengesahkan,<br/>Komite Olimpiade Daerah</p><p className="font-black">_______________________</p></div></div>
+                      <div className="mt-24 flex justify-end text-center text-primary-900 font-bold text-[14px] uppercase tracking-widest"><div><p className="mb-24">Mengesahkan,<br/>Komite Olimpiade Daerah</p><p className="font-black">_______________________</p></div></div>
                    </div>
                 </AdminLayout>
              );
@@ -2175,6 +2222,7 @@
 
           return (
              <React.Fragment>
+                {/* CustomDialog sekarang dirender secara aman di level root tanpa melanggar Rules of Hooks */}
                 <CustomDialog dialog={dialog} onClose={() => setDialog(null)} />
                 {renderRoute()}
              </React.Fragment>
