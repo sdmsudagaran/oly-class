@@ -762,7 +762,9 @@
                      </div>
                      <input
                         type="text"
-                        className="w-full p-4 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none text-slate-800 font-reading font-semibold text-lg"
+                        /* Tambahkan select-text dan style inline untuk mem-bypass prevent-select global */
+                        className="w-full p-4 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none text-slate-800 font-reading font-semibold text-lg select-text"
+                        style={{ userSelect: 'auto', WebkitUserSelect: 'auto' }}
                         placeholder="Ketik jawaban singkat di sini..."
                         value={currentAnswer || ''}
                         onChange={(e) => handleAnswerChange(e.target.value)}
@@ -778,7 +780,9 @@
                         <AlertCircle size={18} className="mr-2 text-emerald-600 flex-shrink-0"/> Jawablah uraian secara rinci dan komprehensif. (Penilaian rubrik guru)
                      </div>
                      <textarea
-                        className="w-full p-4 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none text-slate-800 min-h-[200px] font-reading resize-y"
+                        /* Tambahkan select-text dan style inline untuk mem-bypass prevent-select global */
+                        className="w-full p-4 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none text-slate-800 min-h-[200px] font-reading resize-y select-text"
+                        style={{ userSelect: 'auto', WebkitUserSelect: 'auto' }}
                         placeholder="Tulis uraian jawaban secara lengkap..."
                         value={currentAnswer || ''}
                         onChange={(e) => handleAnswerChange(e.target.value)}
