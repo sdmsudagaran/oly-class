@@ -1544,14 +1544,13 @@
              const [selectedResults, setSelectedResults] = useState([]);
              const [isDeleting, setIsDeleting] = useState(false);
              
-             // State baru untuk koreksi manual
+             // State untuk koreksi manual
              const [manualScores, setManualScores] = useState({});
              const [isUpdatingScore, setIsUpdatingScore] = useState(false);
 
              const schoolList = ['Semua', ...new Set(results.map(r => r.participant?.school).filter(Boolean))];
              const filteredResults = filterSchool === 'Semua' ? results : results.filter(r => r.participant?.school === filterSchool);
 
-             // Saat modal detail dibuka, inisialisasi state manual skor
              useEffect(() => {
                  if (selectedAnalysis) {
                      const details = Array.isArray(selectedAnalysis.detail?.detailedResults) ? selectedAnalysis.detail.detailedResults : [];
@@ -1574,15 +1573,13 @@
                      let newTotalEarned = 0;
                      let maxTotal = 0;
 
-                     // Update skor per item
                      const updatedDetails = details.map(d => {
-                         const updatedEarned = manualScores[d.qId] !== undefined ? manualScores[d.qId] : d.pointsEarned;
+                         const updatedEarned = manualScores[d.qId] !== undefined ? manualScores[d.qId] : (d.pointsEarned || 0);
                          newTotalEarned += updatedEarned;
                          maxTotal += (d.questionMaxPoints || 0);
                          return { ...d, pointsEarned: updatedEarned };
                      });
 
-                     // Hitung ulang nilai akhir
                      let rawPercentage = maxTotal > 0 ? (newTotalEarned / maxTotal) * 100 : 0;
                      const newFinalScore = Math.min(100, Math.round(rawPercentage));
 
@@ -1596,7 +1593,7 @@
 
                      alert("Koreksi nilai berhasil disimpan!");
                      setSelectedAnalysis(null);
-                     fetchSupabaseData(); // Refresh tabel admin
+                     fetchSupabaseData(); 
                  } catch (err) {
                      alert("Gagal memperbarui skor: " + err.message);
                  } finally {
@@ -1604,360 +1601,248 @@
                  }
              };
 
-             // ... (Fungsi handleSelectAll, deleteResult, downloadExcel dibiarkan sama seperti sebelumnya) ...
-             
-             // TAMPILAN MODAL ANALISIS
-             const renderAnalysisModal = () => (
-                 <div className="fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
-                     <div className="bg-white rounded-xl shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col">
-                         <div className="bg-slate-50 border-b px-6 py-4 flex justify-between items-center">
-                            <div>
-                                <h3 className="font-bold text-slate-800 text-lg">Lembar Koreksi: {selectedAnalysis.participant?.name}</h3>
-                                <p className="text-sm text-slate-500">{selectedAnalysis.participant?.school}</p>
-                            </div>
-                            <button onClick={() => setSelectedAnalysis(null)} className="text-slate-500 hover:text-slate-800 bg-slate-200 p-2 rounded-lg"><X size={18}/></button>
-                         </div>
-                         <div className="p-0 overflow-y-auto flex-1">
-                             <table className="w-full text-left text-sm border-collapse">
-                                 <thead className="bg-slate-100 border-b sticky top-0 shadow-sm z-10">
-                                     <tr>
-                                         <th className="p-4 w-12 text-center text-slate-600">No</th>
-                                         <th className="p-4 text-slate-600">Pertanyaan & Kunci Asli</th>
-                                         <th className="p-4 w-64 text-slate-600 border-l border-r border-slate-200 bg-blue-50/30">Pilihan/Jawaban Siswa</th>
-                                         <th className="p-4 w-40 text-center text-slate-600">Koreksi Skor</th>
-                                     </tr>
-                                 </thead>
-                                 <tbody>
-                                     {questions.map((q, i) => {
-                                         const details = Array.isArray(selectedAnalysis.detail?.detailedResults) ? selectedAnalysis.detail.detailedResults : [];
-                                         const d = details.find(x => x.qId === q.id);
-                                         if (!d) return null;
+             const handleSelectAll = (e) => {
+                 if (e.target.checked) setSelectedResults(filteredResults.map(r => r.id));
+                 else setSelectedResults([]);
+             };
 
-                                         let ansDisplay = <span className="text-secondary-500 italic font-semibold">Tidak Menjawab</span>;
-                                         let keyDisplay = null;
-                                         
-                                         // Logika display jawaban sesuai tipe (MCQ, SHORT, ESSAY) ...
-                                         if (q.type === 'SHORT' || q.type === 'ESSAY') {
-                                            if (!d.isEmpty && d.userAnswer) {
-                                                ansDisplay = <div className="font-medium text-slate-800 whitespace-pre-wrap">{d.userAnswer}</div>;
-                                            }
-                                         }
-                                         
-                                         const maxP = d.questionMaxPoints || (q.points || 1);
-                                         
-                                         return (
-                                             <tr key={q.id} className="border-b border-slate-100 hover:bg-slate-50">
-                                                 <td className="p-4 text-center font-bold text-slate-400 align-top">{i + 1}</td>
-                                                 <td className="p-4 align-top">
-                                                     <div className="line-clamp-4 text-slate-800 text-sm font-medium font-reading" dangerouslySetInnerHTML={{__html: q.question}} />
-                                                     {keyDisplay}
-                                                 </td>
-                                                 <td className="p-4 align-top border-l border-r border-slate-100 bg-blue-50/10 font-reading">{ansDisplay}</td>
-                                                 <td className="p-4 text-center align-top bg-slate-50">
-                                                     <div className="flex flex-col items-center gap-2">
-                                                         <div className="flex items-center">
-                                                            <input 
-                                                                type="number" 
-                                                                step="0.1"
-                                                                className="w-16 text-center font-bold p-2 border border-slate-300 rounded focus:ring-2 focus:ring-primary-500" 
-                                                                value={manualScores[q.id] !== undefined ? manualScores[q.id] : (d.pointsEarned || 0)} 
-                                                                onChange={(e) => handleManualScoreChange(q.id, e.target.value)} 
-                                                            />
-                                                            <span className="ml-2 font-bold text-slate-400">/ {maxP}</span>
-                                                         </div>
-                                                     </div>
-                                                 </td>
-                                             </tr>
-                                         );
-                                     })}
-                                 </tbody>
-                             </table>
-                         </div>
-                         <div className="bg-slate-50 border-t px-6 py-4 flex justify-between items-center">
-                             <div className="text-sm font-bold text-slate-600">Pastikan skor sesuai dengan rubrik penilaian.</div>
-                             <button onClick={simpanKoreksiManual} disabled={isUpdatingScore} className="px-6 py-2.5 bg-success-600 text-white rounded-lg font-bold shadow-md hover:bg-success-700 disabled:opacity-50 transition-colors">
-                                 {isUpdatingScore ? 'Menyimpan...' : 'Simpan Perubahan Nilai'}
-                             </button>
-                         </div>
-                     </div>
-                 </div>
-             );
+             const handleSelectResult = (id) => {
+                 if (selectedResults.includes(id)) setSelectedResults(selectedResults.filter(rid => rid !== id));
+                 else setSelectedResults([...selectedResults, id]);
+             };
 
-             // Return utama komponen AdminResults
+             const deleteResult = async (id) => {
+                 if(!confirm("Hapus hasil ujian peserta ini?")) return;
+                 try {
+                     const db = await getSupabase();
+                     await db.from('results').delete().eq('id', id);
+                     fetchSupabaseData();
+                 } catch(e) { alert("Gagal menghapus: " + e.message); }
+             };
+
+             const handleDeleteSelected = async () => {
+                 if (selectedResults.length === 0) return;
+                 if (!confirm(`Hapus permanen ${selectedResults.length} data ujian terpilih?`)) return;
+                 setIsDeleting(true);
+                 try {
+                     const db = await getSupabase();
+                     const { error } = await db.from('results').delete().in('id', selectedResults);
+                     if (error) throw error;
+                     await fetchSupabaseData(); 
+                     setSelectedResults([]); 
+                     alert("Data terpilih berhasil dihapus.");
+                 } catch (err) {
+                     alert("Gagal hapus masal: " + err.message);
+                 } finally {
+                     setIsDeleting(false);
+                 }
+             };
+
+             const downloadExcel = () => {
+                 if (filteredResults.length === 0) return alert("Tidak ada data untuk diunduh.");
+                 let csvContent = "\uFEFFNo,Nama Peserta,Sekolah/Kelas,Skor Didapat,Total Maks Skor,Nilai Akhir (100),Waktu Mulai Ujian\n";
+                 
+                 filteredResults.forEach((r, i) => {
+                     const name = r.participant?.name ? r.participant.name.replace(/"/g, '""') : '';
+                     const school = r.participant?.school ? r.participant.school.replace(/"/g, '""') : '';
+                     const details = Array.isArray(r.detail?.detailedResults) ? r.detail.detailedResults : [];
+                     const earned = details.reduce((sum, d) => sum + (d.pointsEarned || 0), 0);
+                     const maxP = details.reduce((sum, d) => sum + (d.questionMaxPoints || 0), 0);
+                     const dateObj = new Date(r.startTime);
+                     const timeStr = dateObj.toLocaleString('id-ID');
+                     
+                     csvContent += `${i + 1},"${name}","${school}",${earned},${maxP},${r.score},"${timeStr}"\n`;
+                 });
+                 
+                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                 const link = document.createElement("a");
+                 link.href = URL.createObjectURL(blob);
+                 link.download = `Hasil_Ujian_${filterSchool}_${new Date().getTime()}.csv`;
+                 link.click();
+             };
+
              return (
                <AdminLayout title="Manajemen Hasil Ujian">
-                 {/* Area Header dan Tabel (Sama seperti sebelumnya) */}
-                 {selectedAnalysis && renderAnalysisModal()}
-                 {/* ... Sisa Tabel ... */}
-               </AdminLayout>
-             );
-          };
+                 <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl border shadow-sm">
+                     <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                         <select value={filterSchool} onChange={e=>setFilterSchool(e.target.value)} className="w-full sm:w-auto border rounded-lg p-2 text-sm bg-slate-50 font-semibold focus:ring-2 focus:ring-primary-500 outline-none cursor-pointer">
+                             {schoolList.map(s => <option key={s} value={s}>{s}</option>)}
+                         </select>
+                         
+                         {selectedResults.length > 0 && (
+                             <button onClick={handleDeleteSelected} disabled={isDeleting} className="bg-rose-50 text-rose-700 border border-rose-200 px-4 py-2 rounded-lg text-sm font-bold flex items-center hover:bg-rose-100 transition-colors shadow-sm">
+                                 <Trash2 size={16} className="mr-2"/> Hapus ({selectedResults.length})
+                             </button>
+                         )}
+                     </div>
+                     <div className="flex gap-2 w-full sm:w-auto">
+                         <button onClick={downloadExcel} className="flex-1 sm:flex-none bg-success-50 text-success-700 border border-success-200 px-4 py-2 rounded-lg text-sm font-bold flex items-center justify-center hover:bg-success-100 transition-colors shadow-sm">
+                             <i className="fas fa-file-excel mr-2"></i> Unduh Excel
+                         </button>
+                         <button onClick={fetchSupabaseData} className="flex-1 sm:flex-none bg-primary-50 text-primary-600 border border-primary-200 px-4 py-2 rounded-lg text-sm font-bold flex items-center justify-center hover:bg-primary-100 transition-colors shadow-sm" title="Refresh">
+                             <i className="fas fa-sync-alt"></i>
+                         </button>
+                     </div>
+                 </div>
 
-          const AdminQuestions = () => {
-            const [isSaving, setIsSaving] = useState(false);
-            const [view, setViewLocal] = useState(window.savedAdminView || 'folders'); 
-            const [filterFolder, setFilterFolderLocal] = useState(window.savedAdminFolder || 'Utama');
-            const setView = (v) => { window.savedAdminView = v; setViewLocal(v); };
-            const setFilterFolder = (f) => { window.savedAdminFolder = f; setFilterFolderLocal(f); };
-
-            const defaultMCQ = { id: '', type: 'MCQ', difficulty: 'Mudah', folder: filterFolder, points: 1, question: '', options: [{id:'A', text:''}, {id:'B', text:''}, {id:'C', text:''}, {id:'D', text:''}], correctAnswer: 'A' };
-            const defaultSHORT = { id: '', type: 'SHORT', difficulty: 'Mudah', folder: filterFolder, points: 1, question: '', correctAnswer: '' };
-            const defaultESSAY = { id: '', type: 'ESSAY', difficulty: 'Mudah', folder: filterFolder, points: 1, question: '' };
-            
-            const [formData, setFormData] = useState(defaultMCQ);
-
-            const saveQuestion = async (e) => {
-               e.preventDefault(); setIsSaving(true);
-               try {
-                 const db = await getSupabase();
-                 let payload = { id: formData.id || `q${Date.now()}`, type: formData.type, difficulty: formData.difficulty, folder: formData.folder || filterFolder, points: formData.points, question: formData.question };
-                 if (formData.type === 'MCQ') { payload.options = formData.options; payload.correctAnswer = formData.correctAnswer; } 
-                 else if (formData.type === 'SHORT') { payload.correctAnswer = formData.correctAnswer; }
-                 
-                 if(!formData.id) { const { error } = await db.from('questions').insert([payload]); if (error) throw error; } 
-                 else { const { error } = await db.from('questions').update(payload).eq('id', payload.id); if (error) throw error; }
-                 
-                 setFilterFolder(payload.folder); setView('list'); await fetchSupabaseData(); 
-                 showAlert("Soal berhasil disimpan ke dalam bank soal.");
-               } catch (err) { showAlert("GAGAL MENYIMPAN KE DATABASE!\n" + err.message); } finally { setIsSaving(false); }
-            };
-
-            const deleteQuestion = async (id) => {
-                showConfirm("Hapus soal dari bank soal secara permanen?", async () => {
-                    try { const db = await getSupabase(); const { error } = await db.from('questions').delete().eq('id', id); if (error) throw error; setView('list'); await fetchSupabaseData(); showAlert("Soal terhapus."); } catch(e) { showAlert(e.message); }
-                });
-            };
-
-            const duplicateQuestion = async (q) => {
-                setIsSaving(true);
-                try {
-                    const db = await getSupabase(); const duplicatedQ = { ...q, id: `q${Date.now()}_copy` };
-                    const { error } = await db.from('questions').insert([duplicatedQ]); if (error) throw error;
-                    setFilterFolder(q.folder || filterFolder); setView('list'); await fetchSupabaseData(); 
-                    showAlert("Duplikasi soal berhasil.");
-                } catch(e) { showAlert(e.message); } setIsSaving(false);
-            };
-
-            const publishFolder = async (fname) => {
-                try {
-                    const db = await getSupabase();
-                    const { data, error: checkErr } = await db.from('tokens').select('code').eq('code', 'SYS_SETTING_FOLDER').maybeSingle();
-                    if (checkErr && checkErr.code !== 'PGRST116') throw checkErr;
-                    if (data) { const { error } = await db.from('tokens').update({ status: fname }).eq('code', 'SYS_SETTING_FOLDER'); if (error) throw error; } 
-                    else { const { error } = await db.from('tokens').insert([{ code: 'SYS_SETTING_FOLDER', status: fname, generatedAt: new Date().toISOString() }]); if (error) throw error; }
-                    setActiveFolder(fname); showAlert(`Paket "${fname}" resmi digunakan untuk olimpiade!`);
-                } catch(e) { showAlert("Gagal terbit: " + e.message); }
-            };
-
-            const folderStats = questions.reduce((acc, q) => { const f = q.folder || 'Utama'; acc[f] = (acc[f] || 0) + 1; return acc; }, {});
-            tokens.forEach(t => { if (t.code && t.code.startsWith('SYS_FOLDER_') && folderStats[t.status] === undefined) { folderStats[t.status] = 0; } });
-            if (folderStats['Utama'] === undefined) folderStats['Utama'] = 0;
-
-            const createFolder = async () => {
-                showPrompt("Ketikkan Nama Paket Soal Baru:", async (fname) => {
-                    if (fname && fname.trim() !== '') {
-                        setIsSaving(true);
-                        try {
-                            const db = await getSupabase();
-                            const { error } = await db.from('tokens').insert([{ code: `SYS_FOLDER_${Date.now()}`, status: fname.trim(), generatedAt: new Date().toISOString(), participant_name: 'SYSTEM_FOLDER' }]);
-                            if (error) throw error;
-                            await fetchSupabaseData(); setFilterFolder(fname.trim()); setView('list');
-                            showAlert("Paket baru berhasil dibuat.");
-                        } catch(e) { showAlert(e.message); } setIsSaving(false);
-                    }
-                });
-            };
-
-            const editFolder = async (oldName) => {
-                showPrompt(`Ubah nama "${oldName}" menjadi:`, async (newName) => {
-                    if (newName && newName.trim() !== '' && newName.trim() !== oldName) {
-                        setIsSaving(true);
-                        try {
-                            const db = await getSupabase();
-                            const folderToken = tokens.find(t => t.code && t.code.startsWith('SYS_FOLDER_') && t.status === oldName);
-                            if (folderToken) { const { error: err1 } = await db.from('tokens').update({ status: newName.trim() }).eq('code', folderToken.code); if (err1) throw err1; }
-                            const { error: err2 } = await db.from('questions').update({ folder: newName.trim() }).eq('folder', oldName); if (err2) throw err2;
-                            if (activeFolder === oldName) { const { error: err3 } = await db.from('tokens').update({ status: newName.trim() }).eq('code', 'SYS_SETTING_FOLDER'); if (err3) throw err3; setActiveFolder(newName.trim()); }
-                            await fetchSupabaseData(); setFilterFolder(newName.trim());
-                            showAlert("Nama paket berhasil diperbarui.");
-                        } catch(e) { showAlert(e.message); } setIsSaving(false);
-                    }
-                }, oldName);
-            };
-
-            const deleteFolder = async (fname) => {
-                if (fname === 'Utama') return showAlert("Folder Utama dilarang dihapus.");
-                showConfirm(`Hapus permanen paket "${fname}" beserta seluruh isinya?`, async () => {
-                    setIsSaving(true);
-                    try {
-                        const db = await getSupabase();
-                        const folderToken = tokens.find(t => t.code && t.code.startsWith('SYS_FOLDER_') && t.status === fname);
-                        if (folderToken) { const { error: err1 } = await db.from('tokens').delete().eq('code', folderToken.code); if (err1) throw err1; }
-                        const { error: err2 } = await db.from('questions').delete().eq('folder', fname); if (err2) throw err2;
-                        if (activeFolder === fname) { const { error: err3 } = await db.from('tokens').update({ status: 'Utama' }).eq('code', 'SYS_SETTING_FOLDER'); if (err3) throw err3; setActiveFolder('Utama'); }
-                        await fetchSupabaseData(); setFilterFolder('Utama'); setView('folders');
-                        showAlert("Paket dan isinya terhapus bersih.");
-                    } catch(e) { showAlert(e.message); } setIsSaving(false);
-                });
-            };
-
-            if (view === 'create' || view === 'edit') {
-               const availableFolders = [...new Set([...questions.map(q => q.folder || 'Utama'), ...tokens.filter(t => t.code && t.code.startsWith('SYS_FOLDER_')).map(t => t.status), filterFolder, 'Utama'])];
-               return (
-                 <AdminLayout title="Authoring Soal Olimpiade">
-                    <div className="bg-white rounded-3xl shadow-xl border border-slate-200 max-w-4xl mx-auto p-8 sm:p-10 mb-10 border-t-4 border-primary-800 relative overflow-hidden font-sans">
-                        <div className="absolute top-0 right-0 p-10 opacity-5 pointer-events-none"><Edit size={120}/></div>
-                        <h3 className="text-[20px] font-black text-slate-800 uppercase tracking-widest mb-8 border-b-2 border-slate-100 pb-4 relative z-10">Form Penyusunan Soal</h3>
-                        <form onSubmit={saveQuestion} className="space-y-8 relative z-10">
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50 p-6 rounded-2xl border border-slate-200">
-                                <div>
-                                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Tipe Komponen</label>
-                                    <select value={formData.type} onChange={e => {
-                                        const t = e.target.value;
-                                        if(t === 'MCQ') setFormData({...defaultMCQ, difficulty: formData.difficulty, folder: formData.folder, question: formData.question});
-                                        else if(t === 'SHORT') setFormData({...defaultSHORT, difficulty: formData.difficulty, folder: formData.folder, question: formData.question});
-                                        else if(t === 'ESSAY') setFormData({...defaultESSAY, difficulty: formData.difficulty, folder: formData.folder, question: formData.question});
-                                    }} className="w-full p-3.5 border-2 border-slate-200 rounded-xl bg-white text-[14px] font-bold focus:border-primary-500 outline-none transition-colors cursor-pointer text-slate-700">
-                                        <option value="MCQ">Pilihan Ganda (A-D)</option>
-                                        <option value="SHORT">Isian Singkat</option>
-                                        <option value="ESSAY">Uraian / Essay</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Tingkat Kesulitan (Bobot)</label>
-                                    <select value={formData.difficulty} onChange={e => setFormData({...formData, difficulty: e.target.value})} className="w-full p-3.5 border-2 border-slate-200 rounded-xl bg-white text-[14px] font-bold focus:border-primary-500 outline-none transition-colors cursor-pointer text-slate-700">
-                                        <option value="Mudah">MUDAH (Bobot 1.00)</option>
-                                        <option value="Sedang">SEDANG (Bobot 1.25)</option>
-                                        <option value="Sulit">SULIT (Bobot 1.50)</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Paket Penempatan</label>
-                                    <select value={formData.folder || filterFolder} onChange={e => setFormData({...formData, folder: e.target.value})} className="w-full p-3.5 border-2 border-slate-200 rounded-xl bg-white text-[14px] font-bold focus:border-primary-500 outline-none transition-colors cursor-pointer text-slate-700">
-                                        {availableFolders.map(f => <option key={f} value={f}>{f}</option>)}
-                                    </select>
-                                </div>
+                 {selectedAnalysis && (
+                    <div className="fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-xl shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col">
+                            <div className="bg-slate-50 border-b px-6 py-4 flex justify-between items-center">
+                               <div>
+                                   <h3 className="font-bold text-slate-800 text-lg">Lembar Koreksi: {selectedAnalysis.participant?.name}</h3>
+                                   <p className="text-sm text-slate-500">{selectedAnalysis.participant?.school}</p>
+                               </div>
+                               <button onClick={() => setSelectedAnalysis(null)} className="text-slate-500 hover:text-slate-800 bg-slate-200 p-2 rounded-lg"><X size={18}/></button>
                             </div>
+                            <div className="p-0 overflow-y-auto flex-1">
+                                <table className="w-full text-left text-sm border-collapse">
+                                    <thead className="bg-slate-100 border-b sticky top-0 shadow-sm z-10">
+                                        <tr>
+                                            <th className="p-4 w-12 text-center text-slate-600">No</th>
+                                            <th className="p-4 text-slate-600">Pertanyaan & Kunci Asli</th>
+                                            <th className="p-4 w-64 text-slate-600 border-l border-r border-slate-200 bg-primary-50/30">Pilihan/Jawaban Siswa</th>
+                                            <th className="p-4 w-40 text-center text-slate-600">Koreksi Skor</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {questions.map((q, i) => {
+                                            const details = Array.isArray(selectedAnalysis.detail?.detailedResults) ? selectedAnalysis.detail.detailedResults : [];
+                                            const d = details.find(x => x.qId === q.id);
+                                            if (!d) return null;
 
-                            <div>
-                                <label className="block text-[14px] font-black text-slate-800 uppercase tracking-widest mb-3 flex items-center"><div className="w-6 h-6 bg-primary-800 text-white rounded flex items-center justify-center mr-2 text-xs">Q</div> Redaksi Pertanyaan</label>
-                                <RichTextEditor value={formData.question} onChange={val => setFormData({...formData, question: val})} showPrompt={showPrompt} />
+                                            let ansDisplay = <span className="text-secondary-500 italic font-semibold">Tidak Menjawab</span>;
+                                            let keyDisplay = null;
+                                            
+                                            if (q.type === 'MCQ') {
+                                                const correctOpt = q.options?.find(o => o.id === q.correctAnswer);
+                                                const tmpK = document.createElement("div"); tmpK.innerHTML = correctOpt?.text || q.correctAnswer;
+                                                keyDisplay = <div className="mt-3 p-2 bg-success-50 rounded border border-success-100 text-xs text-slate-700 font-medium"><strong className="text-success-700">Kunci Jawaban: {q.correctAnswer}</strong> - {tmpK.textContent}</div>;
+                                                
+                                                if (!d.isEmpty && d.userAnswer) {
+                                                    const opt = q.options?.find(o => o.id === d.userAnswer);
+                                                    const tmp = document.createElement("div"); tmp.innerHTML = opt?.text || d.userAnswer;
+                                                    ansDisplay = <div className="font-medium text-slate-800"><strong className="text-primary-600">{d.userAnswer}.</strong> {tmp.textContent}</div>;
+                                                }
+                                            } else if (q.type === 'MCMA') {
+                                                const correctTexts = (q.correctAnswers||[]).map(ansId => {
+                                                    const stmt = q.statements?.find(s => String(s.id) === String(ansId));
+                                                    const t = document.createElement("div"); t.innerHTML = stmt?.text || ansId;
+                                                    return t.textContent;
+                                                });
+                                                keyDisplay = <div className="mt-3 p-2 bg-success-50 rounded border border-success-100 text-xs text-slate-700 font-medium"><strong className="text-success-700 block mb-1">Kunci (Pilih Semua):</strong> <ul className="list-disc pl-4">{correctTexts.map((txt, ii)=><li key={ii}>{txt}</li>)}</ul></div>;
+
+                                                if (!d.isEmpty && Array.isArray(d.userAnswer)) {
+                                                    ansDisplay = <ul className="list-disc pl-4 space-y-1">
+                                                        {d.userAnswer.map(ansId => {
+                                                            const stmt = q.statements?.find(s => String(s.id) === String(ansId));
+                                                            const tmp = document.createElement("div"); tmp.innerHTML = stmt?.text || ansId;
+                                                            return <li key={ansId} className="text-xs font-medium text-slate-700">{tmp.textContent}</li>;
+                                                        })}
+                                                    </ul>;
+                                                }
+                                            } else if (q.type === 'CATEGORY') {
+                                                if (!d.isEmpty && d.userAnswer) {
+                                                    const keys = Object.keys(d.userAnswer);
+                                                    ansDisplay = <ul className="space-y-2">
+                                                        {keys.map(k => {
+                                                            const stmt = q.statements?.find(s => String(s.id) === String(k));
+                                                            const tmp = document.createElement("div"); tmp.innerHTML = stmt?.text || k;
+                                                            const isCorrectLine = d.userAnswer[k] === stmt?.correctCategory;
+                                                            return <li key={k} className="text-xs text-slate-600 bg-slate-50 p-2 rounded border leading-snug"><div className="mb-1 text-[10px] font-bold text-slate-400">Pernyataan: <span className="text-slate-700 font-medium">{tmp.textContent}</span></div> <span className={`font-bold px-1.5 py-0.5 rounded text-white ${isCorrectLine ? 'bg-success-500' : 'bg-rose-500'}`}>{d.userAnswer[k]}</span> <span className="text-slate-400 ml-1">(Kunci: {stmt?.correctCategory})</span></li>;
+                                                        })}
+                                                    </ul>;
+                                                }
+                                            } else if (q.type === 'SHORT' || q.type === 'ESSAY') {
+                                                keyDisplay = <div className="mt-3 p-2 bg-secondary-50 rounded border border-secondary-100 text-xs text-slate-700 font-medium"><strong className="text-secondary-700">Koreksi Manual:</strong> Sesuaikan skor dengan rubrik jawaban.</div>;
+                                                if (!d.isEmpty && d.userAnswer) {
+                                                    ansDisplay = <div className="font-medium text-slate-800 whitespace-pre-wrap">{d.userAnswer}</div>;
+                                                }
+                                            }
+
+                                            const maxP = d.questionMaxPoints || (q.points || 1);
+                                            
+                                            return (
+                                                <tr key={q.id} className="border-b border-slate-100 hover:bg-slate-50">
+                                                    <td className="p-4 text-center font-bold text-slate-400 align-top">{i + 1}</td>
+                                                    <td className="p-4 align-top">
+                                                        <div className="line-clamp-4 text-slate-800 text-sm font-medium font-reading" dangerouslySetInnerHTML={{__html: q.question}} />
+                                                        {keyDisplay}
+                                                    </td>
+                                                    <td className="p-4 align-top border-l border-r border-slate-100 bg-primary-50/10 font-reading">{ansDisplay}</td>
+                                                    <td className="p-4 text-center align-top bg-slate-50">
+                                                        <div className="flex flex-col items-center gap-2">
+                                                            <div className="flex items-center">
+                                                               <input 
+                                                                   type="number" 
+                                                                   step="0.1"
+                                                                   className="w-16 text-center font-bold p-2 border border-slate-300 rounded focus:ring-2 focus:ring-primary-500" 
+                                                                   value={manualScores[q.id] !== undefined ? manualScores[q.id] : (d.pointsEarned || 0)} 
+                                                                   onChange={(e) => handleManualScoreChange(q.id, e.target.value)} 
+                                                               />
+                                                               <span className="ml-2 font-bold text-slate-400">/ {maxP}</span>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
                             </div>
-
-                            {formData.type === 'MCQ' && (
-                                <div className="space-y-6 pt-6 border-t-2 border-slate-100">
-                                    <h3 className="font-black text-slate-800 uppercase tracking-widest text-[14px] mb-4">Redaksi Opsi Jawaban</h3>
-                                    {formData.options.map((opt, idx) => (
-                                        <div key={opt.id} className="flex gap-4 items-start">
-                                            <span className="font-black w-10 pt-3 text-[20px] text-slate-300 text-right">{opt.id}.</span>
-                                            <div className="flex-1">
-                                                <RichTextEditor minHeight="60px" value={opt.text} onChange={val => { const o = [...formData.options]; o[idx].text = val; setFormData({...formData, options: o}); }} showPrompt={showPrompt} />
-                                            </div>
-                                        </div>
-                                    ))}
-                                    <div className="bg-success/10 p-6 rounded-2xl border-2 border-success/20 mt-6 flex items-center justify-between shadow-inner">
-                                        <label className="font-black uppercase tracking-widest text-success-800 text-[14px]"><CheckCircle size={18} className="inline mr-2"/> Kunci Benar:</label>
-                                        <select value={formData.correctAnswer} onChange={e => setFormData({...formData, correctAnswer: e.target.value})} className="p-3 border-2 border-success-400 rounded-xl font-black text-success-700 text-[20px] w-32 text-center bg-white outline-none cursor-pointer focus:ring-4 focus:ring-success/20 transition-all"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select>
-                                    </div>
-                                </div>
-                            )}
-
-                            {formData.type === 'SHORT' && (
-                                <div className="space-y-6 pt-6 border-t-2 border-slate-100">
-                                    <h3 className="font-black text-slate-800 uppercase tracking-widest text-[14px] mb-4">Kunci Isian Singkat</h3>
-                                    <div className="bg-primary-50 p-6 rounded-2xl border-2 border-primary-100">
-                                        <label className="block text-xs font-bold text-primary-800 mb-3">Teks atau Angka Pasti (Sistem akan cek kecocokan huruf, tanpa membedakan besar-kecil)</label>
-                                        <input type="text" value={formData.correctAnswer} onChange={e => setFormData({...formData, correctAnswer: e.target.value})} placeholder="Misal: 105 atau Jakarta" className="w-full p-4 border-2 border-primary-200 rounded-xl text-[20px] font-black text-primary-900 bg-white focus:border-primary-500 outline-none" required/>
-                                    </div>
-                                </div>
-                            )}
-
-                            {formData.type === 'ESSAY' && (
-                                <div className="space-y-6 pt-6 border-t-2 border-slate-100">
-                                    <div className="bg-secondary/10 p-6 rounded-2xl border-2 border-secondary/30 border-dashed text-center">
-                                        <FileText size={40} className="mx-auto text-secondary-300 mb-3"/>
-                                        <h3 className="font-black text-secondary-800 uppercase tracking-widest text-[14px] mb-1">Mode Soal Uraian</h3>
-                                        <p className="text-secondary-700 text-xs font-semibold">Tipe soal ini memerlukan koreksi/penilaian rubrik manual oleh pendidik setelah ujian selesai.</p>
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="flex justify-end gap-4 pt-8 border-t-2 border-slate-100 mt-10 relative z-10">
-                                <button type="button" onClick={() => setView('list')} className="px-8 py-4 border-2 border-slate-200 bg-white rounded-xl font-black text-slate-600 uppercase tracking-widest hover:bg-slate-50 transition-colors">Batal</button>
-                                <button type="submit" disabled={isSaving} className="px-10 py-4 bg-primary-800 text-white rounded-xl font-black uppercase tracking-widest shadow-xl hover:bg-primary-900 transition-all disabled:opacity-50">{isSaving ? 'Menyimpan Data...' : 'Simpan Kedalam Bank'}</button>
-                            </div>
-                        </form>
-                    </div>
-                 </AdminLayout>
-               );
-            }
-
-            if (view === 'list') {
-              const folderQuestions = questions.filter(q => String(q.folder || 'Utama').trim().toLowerCase() === filterFolder.toLowerCase());
-              return (
-                <AdminLayout title={`Paket: ${filterFolder}`}>
-                  <div className="mb-8 flex justify-between items-center bg-white p-5 rounded-3xl border border-slate-200 shadow-sm font-sans">
-                     <button onClick={() => setView('folders')} className="border-2 border-slate-200 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest flex items-center hover:bg-slate-50 text-slate-700 transition-colors"><ChevronLeft size={16} className="mr-2"/> Kembali</button>
-                     <div className="text-right"><span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1">Total Butir</span><span className="text-[20px] font-black text-slate-800">{folderQuestions.length}</span></div>
-                  </div>
-                  
-                  <div className="space-y-6">
-                    {folderQuestions.map((q, idx) => (
-                       <div key={q.id} className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-start gap-6 hover:border-primary-300 transition-all group font-sans">
-                         <div className="flex-1 w-full overflow-hidden">
-                             <div className="flex flex-wrap items-center gap-2 mb-4">
-                                 <span className="text-xs font-black bg-primary-800 text-white px-3 py-1.5 rounded-lg tracking-wider">NO. {idx+1}</span>
-                                 <span className="text-[10px] font-black bg-slate-100 text-slate-500 px-3 py-1.5 rounded uppercase tracking-widest border border-slate-200">{q.type}</span>
-                                 <span className={`text-[10px] font-black px-3 py-1.5 rounded uppercase tracking-widest ${q.difficulty==='Sulit'?'bg-rose-100 text-rose-700':q.difficulty==='Sedang'?'bg-primary-100 text-primary-700':'bg-success/20 text-success-800'}`}>{q.difficulty || 'Mudah'}</span>
-                             </div>
-                             <div className="mt-2 text-slate-800 font-reading text-[16px] leading-[1.8] rich-text-content" dangerouslySetInnerHTML={{__html: q.question}}></div>
-                         </div>
-                         <div className="flex sm:flex-col gap-3 shrink-0 w-full sm:w-auto border-t sm:border-t-0 sm:border-l border-slate-100 pt-4 sm:pt-0 sm:pl-6">
-                            <button onClick={() => duplicateQuestion(q)} className="bg-slate-50 text-slate-600 hover:bg-slate-100 p-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center border border-slate-200 flex-1 sm:flex-none transition-colors"><Copy size={16} className="sm:mr-2"/> <span className="hidden sm:inline">Gandakan</span></button>
-                            <button onClick={() => {setFormData(q); setView('edit');}} className="text-primary-600 bg-primary-50 border border-primary-100 p-3 hover:bg-primary-100 rounded-xl flex items-center justify-center transition-colors" title="Edit Soal"><Edit size={18}/></button>
-                            <button onClick={() => deleteQuestion(q.id)} className="text-rose-600 bg-rose-50 border border-rose-100 p-3 hover:bg-rose-100 rounded-xl flex items-center justify-center transition-colors" title="Hapus Soal"><Trash2 size={18}/></button>
-                         </div>
-                       </div>
-                    ))}
-                    {folderQuestions.length === 0 && <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-slate-300 font-sans"><FileText size={60} className="mx-auto mb-5 text-slate-200"/><h3 className="text-[20px] font-black text-slate-400 uppercase tracking-widest">Kosong</h3><p className="text-[14px] font-bold text-slate-400 mt-2">Gunakan tombol + untuk menambah data soal</p></div>}
-                  </div>
-                  <button onClick={() => {setFormData({...defaultMCQ, folder: filterFolder}); setView('create');}} className="fixed bottom-8 right-8 bg-secondary text-white w-16 h-16 rounded-2xl flex items-center justify-center shadow-xl hover:-translate-y-2 hover:shadow-2xl transition-all z-40"><Plus size={32}/></button>
-                </AdminLayout>
-              );
-            }
-
-            return (
-              <AdminLayout title="Manajemen Paket Soal">
-                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 font-sans">
-                    <div onClick={createFolder} className="bg-white border-2 border-dashed border-slate-300 rounded-3xl p-8 flex flex-col items-center justify-center cursor-pointer min-h-[220px] hover:border-primary-400 hover:bg-primary-50/50 transition-colors group">
-                        <div className="w-16 h-16 bg-slate-100 text-slate-400 group-hover:bg-primary-100 group-hover:text-primary-600 rounded-2xl flex items-center justify-center mb-5 transition-colors"><Plus size={32}/></div>
-                        <span className="font-black text-slate-600 group-hover:text-primary-700 text-[14px] uppercase tracking-widest">Buat Paket Baru</span>
-                    </div>
-                    {Object.entries(folderStats).map(([fname, count]) => {
-                        const isPublished = activeFolder.toLowerCase() === fname.toLowerCase();
-                        return (
-                        <div key={fname} className={`bg-white border-2 rounded-3xl p-8 flex flex-col justify-between shadow-sm min-h-[220px] relative overflow-hidden transition-all hover:shadow-md ${isPublished ? 'border-secondary ring-4 ring-secondary/10' : 'border-slate-200'}`}>
-                            {isPublished && <div className="absolute top-0 right-0 bg-secondary text-white text-[9px] font-black px-4 py-1.5 rounded-bl-xl uppercase tracking-widest shadow-sm">AKTIF</div>}
-                            <div className="pt-2">
-                                <h4 className="font-black text-[24px] text-slate-800 mb-3 truncate" title={fname}>{fname}</h4>
-                                <div className="text-[10px] text-slate-500 font-black uppercase tracking-widest bg-slate-100 inline-block px-3 py-1.5 rounded-md border border-slate-200"><Database size={12} className="inline mr-1 text-slate-400"/> {count} Komponen Soal</div>
-                            </div>
-                            <div className="mt-8 flex flex-col gap-3">
-                                <div className="flex gap-2">
-                                    <button onClick={() => { setFilterFolder(fname); setView('list'); }} className="flex-1 bg-primary-800 py-3 rounded-xl text-xs font-black uppercase tracking-widest text-white hover:bg-primary-900 transition-colors">Buka Editor</button>
-                                    <button onClick={() => editFolder(fname)} className="px-4 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-colors" title="Ubah Nama"><Edit size={16}/></button>
-                                    {fname !== 'Utama' && <button onClick={() => deleteFolder(fname)} className="px-4 bg-white border border-slate-200 text-rose-500 rounded-xl hover:bg-rose-50 transition-colors" title="Hapus"><Trash2 size={16}/></button>}
-                                </div>
-                                <button onClick={() => publishFolder(fname)} className={`w-full py-3.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${isPublished ? 'bg-secondary/20 text-secondary-800 border border-secondary/30' : 'bg-white border-2 border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'}`}>
-                                    {isPublished ? 'DITERBITKAN KE PESERTA' : 'Terbitkan Sekarang'}
+                            <div className="bg-slate-50 border-t px-6 py-4 flex justify-between items-center">
+                                <div className="text-sm font-bold text-slate-600">Pastikan skor sesuai dengan rubrik penilaian.</div>
+                                <button onClick={simpanKoreksiManual} disabled={isUpdatingScore} className="px-6 py-2.5 bg-success-600 text-white rounded-lg font-bold shadow-md hover:bg-success-700 disabled:opacity-50 transition-colors">
+                                    {isUpdatingScore ? 'Menyimpan...' : 'Simpan Perubahan Nilai'}
                                 </button>
                             </div>
                         </div>
-                    )})}
+                    </div>
+                 )}
+                 
+                 <div className="bg-white rounded-xl border overflow-x-auto shadow-sm">
+                    <table className="w-full text-left text-sm">
+                        <thead className="bg-slate-50 border-b">
+                            <tr>
+                                <th className="p-4 text-center w-12">
+                                    <input type="checkbox" className="w-4 h-4 cursor-pointer accent-primary-600 rounded" onChange={handleSelectAll} checked={selectedResults.length > 0 && selectedResults.length === filteredResults.length} />
+                                </th>
+                                <th className="p-4 w-12 text-center">No</th>
+                                <th className="p-4">Nama Peserta</th>
+                                <th className="p-4">Sekolah/Kelas</th>
+                                <th className="p-4 text-center" title="Skor Poin yang didapat">Skor</th>
+                                <th className="p-4 text-center" title="Nilai Skala 100">Nilai</th>
+                                <th className="p-4 text-center">Analisis</th>
+                                <th className="p-4 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filteredResults.map((r, idx)=> {
+                                const details = Array.isArray(r.detail?.detailedResults) ? r.detail.detailedResults : [];
+                                const earned = details.reduce((sum, d) => sum + (d.pointsEarned || 0), 0);
+                                const maxP = details.reduce((sum, d) => sum + (d.questionMaxPoints || 0), 0);
+                                return (
+                                <tr key={r.id} className={`border-b transition-colors ${selectedResults.includes(r.id) ? 'bg-primary-50/40' : 'hover:bg-slate-50'}`}>
+                                    <td className="p-4 text-center">
+                                        <input type="checkbox" className="w-4 h-4 cursor-pointer accent-primary-600 rounded" checked={selectedResults.includes(r.id)} onChange={() => handleSelectResult(r.id)} />
+                                    </td>
+                                    <td className="p-4 text-center font-semibold text-slate-500">{idx + 1}</td>
+                                    <td className="p-4 font-bold text-slate-800 uppercase">{r.participant?.name}</td>
+                                    <td className="p-4 font-medium text-slate-600">{r.participant?.school}</td>
+                                    <td className="p-4 text-center">
+                                        <div className="font-bold text-slate-700">{earned} <span className="text-xs text-slate-400 font-normal">/ {maxP}</span></div>
+                                    </td>
+                                    <td className="p-4 text-center font-black text-success-600 text-lg">{r.score}</td>
+                                    <td className="p-4 text-center"><button onClick={() => setSelectedAnalysis(r)} className="text-primary-600 bg-primary-50 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-primary-100 transition-colors shadow-sm">Lihat Detail</button></td>
+                                    <td className="p-4 text-center"><button onClick={() => deleteResult(r.id)} className="text-rose-500 hover:bg-rose-50 p-2 rounded-lg transition-colors" title="Hapus Hasil"><Trash2 size={16}/></button></td>
+                                </tr>
+                            )})}
+                            {filteredResults.length === 0 && <tr><td colSpan="8" className="text-center p-8 text-slate-500 font-bold bg-slate-50">Belum ada data hasil ujian yang masuk.</td></tr>}
+                        </tbody>
+                    </table>
                  </div>
-              </AdminLayout>
-            );
+               </AdminLayout>
+             );
           };
 
           const AdminItemAnalysis = () => {
@@ -2185,20 +2070,20 @@
           // --- ROUTER Switch ---
           const renderRoute = () => {
             switch (currentRoute) {
-              case '/': case '/login': return <ParticipantLogin />;
-              case '/instruction': return <ParticipantInstruction />;
-              case '/exam': return <ExamEngine />;
-              case '/review': return <ExamReview />;
-              case '/submitted': return <ExamSubmitted />;
-              case '/admin': case '/admin/login': return <AdminLogin />;
-              case '/admin/dashboard': return <AdminDashboard />;
-              case '/admin/tokens': return <AdminTokens />;
-              case '/admin/results': return <AdminResults />;
-              case '/admin/questions': return <AdminQuestions />;
-              case '/admin/analysis': return <AdminItemAnalysis />;
-              case '/admin/reports': return <AdminReports />;
-              default: return <ParticipantLogin />;
-            }
+            case '/': case '/login': return ParticipantLogin();
+            case '/instruction': return ParticipantInstruction();
+            case '/exam': return ExamEngine();
+            case '/review': return ExamReview();
+            case '/submitted': return ExamSubmitted();
+            case '/admin': case '/admin/login': return AdminLogin();
+            case '/admin/dashboard': return AdminDashboard();
+            case '/admin/tokens': return AdminTokens();
+            case '/admin/results': return AdminResults();
+            case '/admin/questions': return AdminQuestions();
+            case '/admin/analysis': return AdminItemAnalysis();
+            case '/admin/reports': return AdminReports();
+            default: return ParticipantLogin();
+          } 
           };
 
           return (
