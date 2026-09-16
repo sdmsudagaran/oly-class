@@ -754,20 +754,38 @@
               </div>
             );
 
-            const RenderSHORT = () => (
-              <div className="mt-6">
-                  <div className="bg-primary-50 border border-primary-100 p-4 rounded-xl mb-4 text-[14px] text-primary-800 font-medium flex items-center font-sans"><AlertCircle size={18} className="mr-2"/> Ketikkan jawaban singkat berupa angka atau satu/dua kata secara presisi.</div>
-                  <input type="text" value={currentAnswer || ''} onChange={e => handleAnswerChange(e.target.value)} placeholder="Ketik jawaban di sini..." className="w-full p-4 text-[20px] font-bold text-slate-800 bg-white border-2 border-slate-300 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/20 outline-none transition-all shadow-sm font-reading" autoFocus/>
-              </div>
-            );
+            const RenderSHORT = () => {
+               return (
+                  <div className="mt-6">
+                     <div className="bg-blue-50/50 border border-blue-200 text-blue-800 p-4 rounded-xl font-medium text-sm mb-4 flex items-center">
+                        <AlertCircle size={18} className="mr-2 text-blue-600 flex-shrink-0"/> Jawablah dengan singkat, padat, dan jelas.
+                     </div>
+                     <input
+                        type="text"
+                        className="w-full p-4 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none text-slate-800 font-reading font-semibold text-lg"
+                        placeholder="Ketik jawaban singkat di sini..."
+                        value={currentAnswer || ''}
+                        onChange={(e) => handleAnswerChange(e.target.value)}
+                     />
+                  </div>
+               );
+            };
 
-            const RenderESSAY = () => (
-              <div className="mt-6">
-                  <div className="bg-success/10 border border-success/20 p-4 rounded-xl mb-4 text-[14px] text-success-800 font-medium flex items-center font-sans"><AlertCircle size={18} className="mr-2"/> Jawablah uraian secara rinci dan komprehensif. (Penilaian rubrik guru)</div>
-                  <textarea value={currentAnswer || ''} onChange={e => handleAnswerChange(e.target.value)} placeholder="Tulis uraian jawaban secara lengkap..." className="w-full p-4 text-[18px] font-medium text-slate-800 bg-white border-2 border-slate-300 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/20 outline-none transition-all shadow-sm h-64 resize-y font-reading leading-[1.8]" />
-              </div>
-            );
-
+            const RenderESSAY = () => {
+               return (
+                  <div className="mt-6">
+                     <div className="bg-emerald-50/50 border border-emerald-200 text-emerald-800 p-4 rounded-xl font-medium text-sm mb-4 flex items-center">
+                        <AlertCircle size={18} className="mr-2 text-emerald-600 flex-shrink-0"/> Jawablah uraian secara rinci dan komprehensif. (Penilaian rubrik guru)
+                     </div>
+                     <textarea
+                        className="w-full p-4 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none text-slate-800 min-h-[200px] font-reading resize-y"
+                        placeholder="Tulis uraian jawaban secara lengkap..."
+                        value={currentAnswer || ''}
+                        onChange={(e) => handleAnswerChange(e.target.value)}
+                     ></textarea>
+                  </div>
+               );
+            };
             const fmtTime = (s) => `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
 
             return (
